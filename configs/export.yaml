@@ -1,0 +1,13 @@
+# Allows hydra to open up in the original folder of the run
+defaults:
+  - paths: default.yaml
+  - hydra: default.yaml
+  - _self_
+
+datasets:
+ - test.h5
+
+# The name of the model to export
+network_name: example_model
+project_name: nu2flows_models
+batch_size: 512

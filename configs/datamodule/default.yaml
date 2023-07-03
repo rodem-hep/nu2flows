@@ -1,0 +1,29 @@
+_target_: src.datamodules.dilepton.H5DataModule
+
+train_conf:
+  data_dir: ${paths.data_dir}
+  met_kins: px,py
+  lep_kins: px,py,pz,log_energy
+  jet_kins: px,py,pz,log_energy
+  nu_kins: px,py,pz
+  file_list:
+  - train_1.h5
+  - train_2.h5
+  - train_3.h5
+  - train_4.h5
+
+test_conf:
+  data_dir: ${paths.data_dir}
+  met_kins: ${..train_conf.met_kins}
+  lep_kins: ${..train_conf.lep_kins}
+  jet_kins: ${..train_conf.jet_kins}
+  nu_kins: ${..train_conf.nu_kins}
+  file_list:
+  - test.h5
+
+loader_conf:
+  pin_memory: True
+  batch_size: 512
+  num_workers: 2
+
+val_frac: 0.1
