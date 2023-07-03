@@ -33,7 +33,7 @@ nuflow = DotMap(
     }
 )
 with h5py.File(model_file, "r") as f:
-    data = f["gen_nu"][:, : 1]
+    data = f["gen_nu"][:, :1]
     nuflow.nu = Mom4Vec(data[:, :, 0])
     nuflow.anti_nu = Mom4Vec(data[:, :, 1])
 
@@ -69,7 +69,6 @@ plot_multi_hists_2(
 
 # Create the W bosons for each of the neutrinos
 for part in ["nu", "anti_nu"]:
-
     # Pull out the appropriate lepton from the file
     idx = 1 if part == "nu" else 0
     lep = file_data.leptons[:, idx : idx + 1]
@@ -83,7 +82,6 @@ for part in ["nu", "anti_nu"]:
 
     # Go through the neutrino types
     for nu in neutrino_list:
-
         # Save the w info
         w_name = "W_plus" if part == "nu" else "W_minus"
         nu[w_name] = lep + nu[part]
