@@ -1,5 +1,5 @@
 # Nu2Flows
-![Hello](./network.png)
+![](./network.png)
 
 This repository facilitates the steps required the produce and evaluate
 conditional normalising flows for neutrino regression in events with multiple neutrinos.
@@ -15,7 +15,9 @@ conditional normalising flows for neutrino regression in events with multiple ne
 2) Download the data.
     - The datafiles are too large and thus are not stored in this repository.
     - You can find them on Zenodo:
-        - doi: 10.5281/zenodo.6782987
+        - doi: 10.5281/zenodo.8113516
+
+
 
 ## Configuration
 
