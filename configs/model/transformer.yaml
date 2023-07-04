@@ -13,16 +13,17 @@ tve_conf:
   num_ca_layers: 2
   mha_config:
     num_heads: 8
-    drp: 0
   dense_config:
     hddn_dim: 256
     num_blocks: 1
+    drp: 0.2
     nrm: layer
 
 embed_conf:
   outp_dim: 32
   hddn_dim: 64
   num_blocks: 1
+  drp: 0.2
   nrm: layer
 
 flow_conf:
@@ -33,6 +34,7 @@ flow_conf:
     num_blocks: 2
     hddn_dim: 128
     nrm: layer
+    drp: 0.2
   rqs_kwargs:
     num_bins: 16
     tail_bound: 4

@@ -6,7 +6,6 @@ wandb/
 lightning_logs/
 nu2flows_models/
 outputs/
-plots/
 .vscode/
 container/
 slurmscripts/

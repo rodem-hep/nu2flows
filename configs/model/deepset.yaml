@@ -7,7 +7,6 @@ embed_conf:
   hddn_dim: 128
   num_blocks: 2
   nrm: layer
-  do_bayesian: False
 
 deepset_conf:
   pool_type: attn
@@ -18,18 +17,15 @@ deepset_conf:
     num_blocks: 2
     hddn_dim: 128
     nrm: layer
-    do_bayesian: ${model.embed_conf.do_bayesian}
   attn_net_kwargs:
     outp_dim: 2
     num_blocks: 2
     hddn_dim: 128
     nrm: layer
-    do_bayesian: ${model.embed_conf.do_bayesian}
   post_net_kwargs:
     num_blocks: 2
     hddn_dim: 128
     nrm: layer
-    do_bayesian: ${model.embed_conf.do_bayesian}
 
 flow_conf:
   nstacks: 10
@@ -39,7 +35,6 @@ flow_conf:
     num_blocks: 2
     hddn_dim: 128
     nrm: layer
-    do_bayesian: ${model.embed_conf.do_bayesian}
   rqs_kwargs:
     num_bins: 10
     tail_bound: 4

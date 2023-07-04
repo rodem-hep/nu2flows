@@ -6,21 +6,18 @@ part_embed_conf:
   hddn_dim: 256
   num_blocks: 1
   nrm: layer
-  do_bayesian: False
 
 tve_conf:
-  model_dim: 64
+  model_dim: 128
   num_sa_layers: 3
   num_ca_layers: 2
   mha_config:
     num_heads: 8
-    drp: 0.3
   dense_config:
     hddn_dim: 256
     num_blocks: 1
+    drp: 0.2
     nrm: layer
-    drp: 0.3
-    do_bayesian: False
 
 # Full configuration for the model optimizer
 optimizer:

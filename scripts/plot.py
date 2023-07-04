@@ -7,7 +7,6 @@ import pyrootutils
 root = pyrootutils.setup_root(search_from=__file__, pythonpath=True)
 
 from pathlib import Path
-
 import h5py
 import numpy as np
 from dotmap import DotMap
@@ -67,28 +66,18 @@ plot_multi_hists_2(
     err_kwargs=[n.err_kwargs for n in neutrino_list],
 )
 
-# Create the W bosons for each of the neutrinos
-for part in ["nu", "anti_nu"]:
-    # Pull out the appropriate lepton from the file
-    idx = 1 if part == "nu" else 0
-    lep = file_data.leptons[:, idx : idx + 1]
+# Pull out the anti-lepton from the file data
+lep = file_data.leptons[:, 1:2]
 
-    # Pull out the appropriate bjet from the file
-    b_idx = 0 if part == "nu" else 1
-    b_loc = file_data.jets_indices == b_idx
-    bjet = np.zeros((len(file_data.MET), 1, 4))
-    bjet[np.any(b_loc, axis=-1)] = file_data.jets[b_loc].mom[:, None]
-    bjet = Mom4Vec(bjet)
+# Pull out the corresponding b jet, create a 4 vector object
+b_loc = file_data.jets_indices == 0
+bjet = np.zeros((len(file_data.jets_indices), 1, 4))
+bjet[np.any(b_loc, axis=-1)] = file_data.jets[b_loc].mom[:, None]
+bjet = Mom4Vec(bjet)
 
-    # Go through the neutrino types
-    for nu in neutrino_list:
-        # Save the w info
-        w_name = "W_plus" if part == "nu" else "W_minus"
-        nu[w_name] = lep + nu[part]
-
-        # Save the top info
-        t_name = "top" if part == "nu" else "anti_top"
-        nu[t_name] = nu[w_name] + bjet
+# For each neutrino definition in the list, create a top candidate from the triplet
+for n in neutrino_list:
+    n.top = n.nu + lep + bjet
 
 # Plot the top mass
 plot_multi_hists_2(
