@@ -1,5 +1,5 @@
 # Nu2Flows
-![](./network.pdf)
+![Hello](./network.png)
 
 This repository facilitates the steps required the produce and evaluate
 conditional normalising flows for neutrino regression in events with multiple neutrinos.
@@ -9,13 +9,13 @@ conditional normalising flows for neutrino regression in events with multiple ne
 ## Setup
 
 1) Setup the environment.
-- Either use the requirement.txt file to setup the appropriate python packages.
     - This project was tested with python 3.9.
-- Alternatively use the docker build file to create an image which can run the package.
+    - You can use the requirement.txt file to setup the appropriate python packages.
+    - Alternatively use the docker build file to create an image which can run the package.
 2) Download the data.
-- The datafiles are too large and thus are not stored in this repository.
-- You can find them on Zenodo:
-    - doi: 10.5281/zenodo.6782987
+    - The datafiles are too large and thus are not stored in this repository.
+    - You can find them on Zenodo:
+        - doi: 10.5281/zenodo.6782987
 
 ## Configuration
 
@@ -45,14 +45,14 @@ conditional normalising flows for neutrino regression in events with multiple ne
 
 We provide 3 executable scripts
 1) `train.py`
-- Compiles the run config as described above and trains the model.
-- Will save checkpoints based on the `paths.output_dir` key.
+    - Compiles the run config as described above and trains the model.
+    - Will save checkpoints based on the `paths.output_dir` key.
 
 2) `export.py`
-- Creates an output `.h5` file containing neutrino candidates for each event in the models test set.
+    - Creates an output `.h5` file containing neutrino candidates for each event in the models test set.
 
 3) `plot.py`
-- Loads the test set data and a model's exported neutrinos.
-- More can be done here but by default we simply plot the model and truth neutrino energy as well as the reconstructed top mass.
+    - Loads the test set data and a model's exported neutrinos.
+    - More can be done here but by default we simply plot the model and truth neutrino energy as well as the reconstructed top mass.
 
 
