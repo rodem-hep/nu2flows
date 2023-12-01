@@ -15,8 +15,8 @@ from src.datamodules.physics import Mom4Vec, delR
 
 
 def read_dilepton_file(file_path: Path, require_tops: bool = False) -> DotMap:
-    """Reads in data from an HDF file, returning the collection of information
-    as a DotMap object."""
+    """Reads in data from an HDF file, returning the collection of information as a
+    DotMap object."""
 
     # Read the delphes table as a dotmap object
     file_data = DotMap()
@@ -63,7 +63,8 @@ def read_dilepton_file(file_path: Path, require_tops: bool = False) -> DotMap:
     return file_data
 
 
-def argmin_last_N_axes(A, N):
+def argmin_last_N_axes(A: np.ndarray, N: np.ndarray) -> np.ndarray:
+    """Returns the indices of the minimum values of the last N axes of A."""
     s = A.shape
     new_shp = s[:-N] + (np.prod(s[-N:]),)
     max_idx = A.reshape(new_shp).argmin(-1)

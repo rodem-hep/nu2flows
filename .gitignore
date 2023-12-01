@@ -10,6 +10,7 @@ outputs/
 container/
 slurmscripts/
 logs/
+.hydra/
 *mypy*
 
 # File types

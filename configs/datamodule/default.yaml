@@ -7,10 +7,10 @@ train_conf:
   jet_kins: px,py,pz,log_energy
   nu_kins: px,py,pz
   file_list:
-  - train_1.h5
-  - train_2.h5
-  - train_3.h5
-  - train_4.h5
+  - events_1_selected.h5
+  - events_2_selected.h5
+  - events_3_selected.h5
+  - events_4_selected.h5
 
 test_conf:
   data_dir: ${paths.data_dir}
@@ -19,11 +19,11 @@ test_conf:
   jet_kins: ${..train_conf.jet_kins}
   nu_kins: ${..train_conf.nu_kins}
   file_list:
-  - test.h5
+  - events_0_selected.h5
 
 loader_conf:
   pin_memory: True
-  batch_size: 512
+  batch_size: 256
   num_workers: 2
 
 val_frac: 0.1

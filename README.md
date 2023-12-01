@@ -1,5 +1,16 @@
-# Nu2Flows
-![](./network.png)
+<div align="center">
+
+# NuFlows
+
+[![python](https://img.shields.io/badge/-Python_3.11-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![pytorch](https://img.shields.io/badge/-PyTorch_2.1-EE4C2C?logo=pytorch&logoColor=white)](https://pytorch.org/)
+[![lightning](https://img.shields.io/badge/-Lightning_2.1-792EE5?logo=lightning&logoColor=white)](https://lightning.ai/)
+[![hydra](https://img.shields.io/badge/-Hydra_1.3-89b8cd&logoColor=white)](https://hydra.cc/)
+[![wandb](https://img.shields.io/badge/-WandB_0.16-orange?logo=weightsandbiases&logoColor=white)](https://wandb.ai)
+![](./nuflows.png)
+</div>
+
+
 
 This repository facilitates the steps required the produce and evaluate
 conditional normalising flows for neutrino regression in events with multiple neutrinos.
@@ -56,5 +67,3 @@ We provide 3 executable scripts
 3) `plot.py`
     - Loads the test set data and a model's exported neutrinos.
     - More can be done here but by default we simply plot the model and truth neutrino energy as well as the reconstructed top mass.
-
-

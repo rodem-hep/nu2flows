@@ -1,8 +1,7 @@
-from functools import partial
 import logging
 from copy import deepcopy
 from pathlib import Path
-from typing import Mapping, Optional, Union
+from typing import Mapping
 
 import h5py
 import numpy as np
@@ -10,8 +9,7 @@ import numpy.lib.recfunctions as rf
 import pytorch_lightning as pl
 from torch.utils.data import DataLoader, Dataset
 
-from utils.plotting import plot_multi_hists_2
-from utils.torch_utils import train_valid_split
+from mltools.mltools.torch_utils import train_valid_split
 from src.datamodules.physics import change_from_ptetaphiE
 
 log = logging.getLogger(__name__)
@@ -25,22 +23,29 @@ class H5Dataset(Dataset):
         *,
         file_list: list,
         data_dir: str,
-        n_per_file: Optional[int] = None,
-        met_kins: Union[str, list] = "px,py",
-        lep_kins: Union[str, list] = "px,py,pz,log_energy",
-        jet_kins: Union[str, list] = "px,py,pz,log_energy",
-        nu_kins: Union[str, list] = "px,py,pz",
+        n_per_file: int = None,
+        met_kins: str | list = "px,py",
+        lep_kins: str | list = "px,py,pz,log_energy",
+        jet_kins: str | list = "px,py,pz,log_energy",
+        nu_kins: str | list = "px,py,pz",
     ) -> None:
         """
-        Args:
-            file_list: List of datasets to load
-            data_dir: The location of the datafiles
-            n_per_file: Maximum number of events to load from each file
-            met_kins: The vars to use for the lepton kinematics
-            lep_kins: The vars to use for the lepton kinematics
-            jet_kins: The vars to use for the jet kinematics
-            nu_kins: The vars to use for the neutrino (target) kinematics
-            scaler_nm: The scaler name for pre and post processing the data
+        Parameters
+        ----------
+        file_list:
+            List of datasets to load
+        data_dir:
+            The location of the datafiles
+        n_per_file:
+            Maximum number of events to load from each file
+        met_kins:
+            The vars to use for the lepton kinematics
+        lep_kins:
+            The vars to use for the lepton kinematics
+        jet_kins:
+            The vars to use for the jet kinematics
+        nu_kins:
+            The vars to use for the neutrino (target) kinematics
         """
         super().__init__()
 
@@ -98,7 +103,7 @@ class H5Dataset(Dataset):
         self.nu = self.nu[..., [1, 2, 3]]
         self.nu_vars = [self.nu_vars[i] for i in [1, 2, 3]]
 
-        # ensure that the lepton array is particle, anti (just like neutrino)
+        # Ensure that the lepton array is particle, anti (just like neutrino)
         order = np.argsort(self.lep[..., -2])  # orders by charge
         order = np.expand_dims(order, -1)
         self.lep = np.take_along_axis(self.lep, order, axis=1)
@@ -118,54 +123,33 @@ class H5Dataset(Dataset):
             self.nu, self.nu_vars, self.nu_kins, n_dim=3
         )
 
-        # Ensure zero padding of the jets post transformation
-        self.jet[~self.jet_mask] = 0
-
-    def plot_variables(self, path: str = "plots") -> None:
-        """Plot some histograms showing the dataset distributions."""
-
-        # Ensure the path exists
-        path = Path(path)
-        path.mkdir(parents=True, exist_ok=True)
-
-        # Plot each data type individually
-        plot_multi_hists_2(self.misc, "misc", self.misc_vars, path=Path(path, "misc"))
-        plot_multi_hists_2(self.met, "met", self.met_vars, path=Path(path, "met"))
-        plot_multi_hists_2(
-            self.lep.reshape(-1, len(self.lep_vars)),
-            "lep",
-            self.lep_vars,
-            path=Path(path, "lep"),
-        )
-        plot_multi_hists_2(
-            self.nu.reshape(-1, len(self.nu_vars)),
-            "nu",
-            self.nu_vars,
-            path=Path(path, "nu"),
-        )
-        plot_multi_hists_2(
-            self.jet[self.jet_mask],
-            "jet",
-            self.jet_vars,
-            path=Path(path, "jet"),
-        )
-
     def __len__(self) -> int:
         return len(self.met)
 
     def __getitem__(self, idx: int) -> list:
-        """Return a list of information pulled from the ndarrays."""
-        return [
-            self.misc[idx],
-            self.met[idx],
-            self.lep[idx],
-            self.jet[idx],
-            self.nu[idx],
-        ]
+        """Return dictionaries for the inputs and the targets."""
+        inputs = {
+            "misc": self.misc[idx],
+            "met": self.met[idx],
+            "leptons": self.lep[idx],
+            "jets": (self.jet[idx], self.jet_mask[idx]),
+        }
+        targets = {"neutrino": self.nu[idx][0], "antineutrino": self.nu[idx][1]}
+        return inputs, targets
 
-    def get_dims(self) -> tuple:
+    def get_input_dims(self) -> tuple:
         """Return the typical dimensions of a data sample."""
-        return tuple(x.shape for x in self[0])
+        return {
+            k: v[0].shape[-1] if isinstance(v, tuple) else v.shape[-1]
+            for k, v in self[0][0].items()
+        }
+
+    def get_target_dims(self) -> tuple:
+        """Return the typical dimensions of a data sample."""
+        return {
+            k: v[0].shape[-1] if isinstance(v, tuple) else v.shape[-1]
+            for k, v in self[0][1].items()
+        }
 
 
 class H5DataModule(pl.LightningDataModule):
@@ -179,11 +163,16 @@ class H5DataModule(pl.LightningDataModule):
     ) -> None:
         """The datamodule for providing dilepton information.
 
-        Args:
-            train_conf: Config for the training dataset class.
-            test_conf: Config for the testing dataset class.
-            loader_conf: Config for the pytorch dataloader.
-            val_frac: Fraction of dataset held out for validaiton. Defaults to 0.1.
+        Parameters
+        ----------
+        train_conf:
+            Config for the training dataset class.
+        test_conf:
+            Config for the testing dataset class.
+        loader_conf:
+            Config for the pytorch dataloader.
+        val_frac:
+            Fraction of dataset held out for validaiton. Defaults to 0.1.
         """
         super().__init__()
         self.save_hyperparameters(logger=False)
@@ -196,7 +185,7 @@ class H5DataModule(pl.LightningDataModule):
     def setup(self, stage: str) -> None:
         if stage in ["fit", "validate"]:
             self.dataset = H5Dataset(**self.hparams.train_conf)
-            self.dataset.plot_variables("plots")
+            # self.dataset.plot_variables("plots")
             self.train_set, self.valid_set = train_valid_split(
                 self.dataset, self.hparams.val_frac
             )
@@ -207,9 +196,13 @@ class H5DataModule(pl.LightningDataModule):
             self.test_set = H5Dataset(**self.hparams.test_conf)
             self.n_test_samples = len(self.test_set)
 
-    def get_dims(self) -> tuple:
-        """Return the typical dimensions of a data sample."""
-        return self.miniset.get_dims()
+    def input_dimensions(self) -> tuple:
+        """Return the typical dimensions of a input sample."""
+        return self.miniset.get_input_dims()
+
+    def target_dimensions(self) -> tuple:
+        """Return the typical dimensions of the target sample."""
+        return self.miniset.get_target_dims()
 
     def train_dataloader(self) -> DataLoader:
         return DataLoader(self.train_set, **self.hparams.loader_conf, shuffle=True)

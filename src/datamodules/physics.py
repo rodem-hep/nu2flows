@@ -1,15 +1,15 @@
 """A collection of functions for particle physics calulations."""
-from __future__ import annotations
+from __future__ import annotations  # Needed for type hinting itself
 
 import numpy as np
 import torch as T
 
-from utils.torch_utils import empty_0dim_like
+from mltools.mltools.torch_utils import empty_0dim_like
 
 
 class Mom4Vec:
-    """A simple class that contains the four vectors of events in either px,
-    py, pz, E or pt, eta, phi, E.
+    """A simple class that contains the four vectors of events in either px, py, pz, E
+    or pt, eta, phi, E.
 
     Will automatically work with both numpy arrays and pytorch tensors
     """
@@ -215,8 +215,7 @@ class Mom4Vec:
         self.oth = self.oth[mask]
 
     def set_massless_energy(self) -> None:
-        """Sets the energy part of the 4 momentum tensor to be the 3 momentum
-        mag."""
+        """Sets the energy part of the 4 momentum tensor to be the 3 momentum mag."""
         self.mom[..., 3:4] = self.p3_mag
 
     def to_cartesian(self) -> None:

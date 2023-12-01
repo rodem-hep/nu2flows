@@ -5,9 +5,9 @@ defaults:
   - _self_
 
 datasets:
- - test.h5
+ - events_0_selected.h5
 
 # The name of the model to export
-network_name: example_model
 project_name: models
+network_name: example
 batch_size: 512

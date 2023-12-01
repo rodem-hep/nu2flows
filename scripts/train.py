@@ -9,7 +9,7 @@ import pytorch_lightning as pl
 import torch as T
 from omegaconf import DictConfig
 
-from utils.hydra_utils import (
+from mltools.mltools.hydra_utils import (
     instantiate_collection,
     log_hyperparameters,
     print_config,
@@ -41,7 +41,11 @@ def main(cfg: DictConfig) -> None:
     datamodule = hydra.utils.instantiate(cfg.datamodule)
 
     log.info("Instantiating the model")
-    model = hydra.utils.instantiate(cfg.model, data_dims=datamodule.get_dims())
+    model = hydra.utils.instantiate(
+        cfg.model,
+        input_dimensions=datamodule.input_dimensions(),
+        target_dimensions=datamodule.target_dimensions(),
+    )
 
     log.info("Instantiating all callbacks")
     callbacks = instantiate_collection(cfg.callbacks)

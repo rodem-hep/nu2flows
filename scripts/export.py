@@ -11,8 +11,8 @@ import hydra
 import torch as T
 from omegaconf import DictConfig
 
-from utils.hydra_utils import reload_original_config
-from utils.torch_utils import to_np
+from mltools.mltools.hydra_utils import reload_original_config
+from mltools.mltools.torch_utils import to_np
 
 log = logging.getLogger(__name__)
 
@@ -22,11 +22,12 @@ log = logging.getLogger(__name__)
 )
 def main(cfg: DictConfig) -> None:
     log.info("Loading run information")
-    orig_cfg = reload_original_config(cfg, get_best=True)
+    orig_cfg = reload_original_config()
 
     log.info("Loading best checkpoint")
+    device = T.device("cuda" if T.cuda.is_available() else "cpu")
     model_class = hydra.utils.get_class(orig_cfg.model._target_)
-    model = model_class.load_from_checkpoint(orig_cfg.ckpt_path)
+    model = model_class.load_from_checkpoint(orig_cfg.ckpt_path, map_location=device)
 
     # Cycle through the datasets and create the dataloader
     for dataset in cfg.datasets:
