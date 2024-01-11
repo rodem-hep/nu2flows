@@ -6,26 +6,32 @@ embed_config:
 
 transformer_config:
   dim: 64
-  encoder_config:
+  num_layers: 4
+  layer_config:
+    num_heads: 8
+    do_self_attn: True
+
+diffusion_config:
+  transformer_config:
     num_layers: 4
     layer_config:
       num_heads: 8
       do_self_attn: True
-  classattention_config:
-    num_layers: 2
-    layer_config:
-      num_heads: 8
-
-flow_config:
-  num_stacks: 10
-  mlp_width: 128
-  mlp_depth: 2
-  mlp_act: silu
-  tail_bound: 4.0
-  dropout: 0
-  num_bins: 8
-  do_lu: False # Waiting on normflows to approve PR
-  init_identity: True
+  min_sigma: 0
+  max_sigma: 80.0
+  ema_sync: 0.999
+  p_mean: -1.2
+  cosine_config:
+    encoding_dim: 16
+    scheme: exponential
+  sampler_function:
+    _target_: mltools.mltools.diffusion.sample_heun
+    _partial_: True
+  sigma_function:
+    _target_: mltools.mltools.diffusion.get_sigmas_karras
+    _partial_: True
+    n_steps: 50
+    rho: 7
 
 # Full configuration for the model optimizer
 optimizer:

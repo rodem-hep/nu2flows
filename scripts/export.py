@@ -22,7 +22,7 @@ log = logging.getLogger(__name__)
 )
 def main(cfg: DictConfig) -> None:
     log.info("Loading run information")
-    orig_cfg = reload_original_config(ckpt_flag="*last*")
+    orig_cfg = reload_original_config(ckpt_flag="*last*")  # TODO: Change this to best
 
     log.info("Loading best checkpoint")
     device = T.device("cuda" if T.cuda.is_available() else "cpu")
