@@ -15,7 +15,7 @@
 This repository facilitates the steps required the produce and evaluate
 conditional normalising flows for neutrino regression in events with multiple neutrinos.
 - Associated papers: https://arxiv.org/abs/2207.00664
-- Associated papers: TBD
+- Associated papers: https://arxiv.org/abs/2307.02405
 
 ## Setup
 
