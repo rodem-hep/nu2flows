@@ -42,7 +42,7 @@ class NuFlows(pl.LightningModule):
         sched_config : dict
             Configuration dictionary for the learning rate scheduler
         optimizer : partial
-            Partially initialised optimiser for the model
+            Partially initialised optimizer for the model
         """
         super().__init__()
         self.save_hyperparameters(logger=False)
@@ -58,11 +58,9 @@ class NuFlows(pl.LightningModule):
             setattr(self, key + "_norm", IterativeNormLayer(inpt_dim))
             setattr(self, key + "_mlp", MLP(inpt_dim, outp_dim=dim, **embed_config))
 
-        # Get a normaliser for each of the targets as well
-        target_dim = 0
-        for key, targ_dim in target_dimensions.items():
-            setattr(self, key + "_norm", IterativeNormLayer(targ_dim))
-            target_dim += targ_dim
+        # Create the normalisation layer for the targets
+        target_dim = sum(target_dimensions.values())
+        self.target_norm = IterativeNormLayer(target_dim)
 
         # Initialise the normalising flow
         self.flow = rqs_flow(xz_dim=target_dim, ctxt_dim=dim, **flow_config)
@@ -117,18 +115,14 @@ class NuFlows(pl.LightningModule):
         return self.transformer(embeddings, kv_mask=all_mask)
 
     def get_targets(self, targets: dict) -> T.Tensor:
-        """Unpack, normalise, and flatten the target dictionary into a single tensor."""
+        """Unpack the target dictionary as a single tensor."""
+        return self.target_norm(T.cat(tuple(targets.values()), dim=-1))
 
-        return T.cat(
-            [getattr(self, name + "_norm")(t) for name, t in targets.items()], dim=-1
-        )
-
-    def post_process_outputs(self, outputs: T.Tensor) -> dict:
-        """Undo the normalisation of the outputs and return a dictionary."""
+    def pack_outputs(self, outputs: T.Tensor) -> dict:
+        """Pack the targets of the flow into a dictionary."""
         output_dict = {}
         for key, dim in self.target_dimensions.items():
-            out = getattr(self, key + "_norm").reverse(outputs[..., :dim])
-            output_dict[key] = out
+            output_dict[key] = outputs[..., :dim]
             outputs = outputs[..., dim:]
         return output_dict
 
@@ -157,17 +151,23 @@ class NuFlows(pl.LightningModule):
 
     def sample(self, inputs: dict, samples_per_event: int = 256) -> dict:
         """Generate many points per sample."""
+
+        # Get the context from the event feature extractor
         ctxt = self.get_context(inputs)
 
-        # Repeat for each sample
+        # Repeat the context for how many samples per event
         ctxt = ctxt.repeat_interleave(samples_per_event, dim=0)
+
+        # Sample from the flow, undo normalisation and reshape
         sampled, log_probs = self.flow.sample(ctxt.shape[0], ctxt)
+        sampled = self.target_norm.reverse(sampled)
         sampled = sampled.view(-1, samples_per_event, sampled.shape[-1])
         log_probs = log_probs.view(-1, samples_per_event)
 
-        sampled = self.post_process_outputs(sampled)
-        sampled["log_probs"] = log_probs
-        return sampled
+        # Pack the targets into a dict and return
+        out_dict = self.pack_outputs(sampled)
+        out_dict["log_probs"] = log_probs
+        return out_dict
 
     def forward(self, *args) -> Any:
         """Alias for sample required for onnx export that assumes order."""

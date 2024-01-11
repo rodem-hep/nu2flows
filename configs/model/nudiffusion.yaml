@@ -1,0 +1,45 @@
+_target_: src.models.nudiffusion.NuDiffusion
+
+embed_config:
+  hddn_dim: 128
+  num_blocks: 1
+
+transformer_config:
+  dim: 64
+  encoder_config:
+    num_layers: 4
+    layer_config:
+      num_heads: 8
+      do_self_attn: True
+  classattention_config:
+    num_layers: 2
+    layer_config:
+      num_heads: 8
+
+flow_config:
+  num_stacks: 10
+  mlp_width: 128
+  mlp_depth: 2
+  mlp_act: silu
+  tail_bound: 4.0
+  dropout: 0
+  num_bins: 8
+  do_lu: False # Waiting on normflows to approve PR
+  init_identity: True
+
+# Full configuration for the model optimizer
+optimizer:
+  _target_: torch.optim.AdamW
+  _partial_: true
+  lr: 1.0e-4
+  weight_decay: 1.0e-4
+
+# Config dicts to pass to utils and pytorch lightning
+sched_config:
+  mltools:
+    name: cyclicwithwarmup
+    epochs_per_cycle: 50
+  lightning:
+    monitor: valid/total_loss
+    interval: step
+    frequency: 1

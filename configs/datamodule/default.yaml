@@ -19,11 +19,11 @@ test_conf:
   jet_kins: ${..train_conf.jet_kins}
   nu_kins: ${..train_conf.nu_kins}
   file_list:
-  - events_0_selected.h5
+  - events_1_selected.h5
 
 loader_conf:
   pin_memory: True
-  batch_size: 256
+  batch_size: 2048
   num_workers: 2
 
 val_frac: 0.1

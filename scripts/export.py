@@ -22,12 +22,15 @@ log = logging.getLogger(__name__)
 )
 def main(cfg: DictConfig) -> None:
     log.info("Loading run information")
-    orig_cfg = reload_original_config()
+    orig_cfg = reload_original_config(ckpt_flag="*last*")
 
     log.info("Loading best checkpoint")
     device = T.device("cuda" if T.cuda.is_available() else "cpu")
     model_class = hydra.utils.get_class(orig_cfg.model._target_)
     model = model_class.load_from_checkpoint(orig_cfg.ckpt_path, map_location=device)
+
+    # Use the export batch size
+    orig_cfg.datamodule.loader_conf.batch_size = cfg.batch_size
 
     # Cycle through the datasets and create the dataloader
     for dataset in cfg.datasets:
