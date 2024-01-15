@@ -40,6 +40,7 @@ def main(cfg: DictConfig) -> None:
 
         log.info("Instantiating the trainer")
         orig_cfg.trainer["enable_progress_bar"] = True
+        orig_cfg.trainer["logger"] = False  # Prevents a lightning_logs folder
         trainer = hydra.utils.instantiate(orig_cfg.trainer)
 
         log.info("Running the prediction loop")

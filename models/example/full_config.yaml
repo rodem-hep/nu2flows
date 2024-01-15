@@ -1,0 +1,106 @@
+seed: 12345
+project_name: models
+network_name: example
+ckpt_path: null
+precision: medium
+full_resume: false
+trainer:
+  _target_: pytorch_lightning.Trainer
+  min_epochs: 1
+  max_epochs: 1000
+  enable_progress_bar: true
+  accelerator: auto
+  devices: 1
+  precision: 32
+  check_val_every_n_epoch: 1
+  gradient_clip_val: 10
+  default_root_dir: /home/users/l/leighm/nu2flows
+model:
+  _target_: src.models.nuflows.NuFlows
+  embed_config:
+    hddn_dim: 256
+    num_blocks: 1
+  transformer_config:
+    dim: 128
+    encoder_config:
+      num_layers: 4
+      layer_config:
+        num_heads: 8
+        do_self_attn: true
+    classattention_config:
+      num_layers: 2
+      layer_config:
+        num_heads: 8
+  flow_config:
+    num_stacks: 8
+    mlp_width: 128
+    mlp_depth: 1
+    mlp_act: silu
+    tail_bound: 4.0
+    dropout: 0
+    num_bins: 8
+    flow_type: coupling
+    do_lu: true
+    init_identity: true
+  optimizer:
+    _target_: torch.optim.AdamW
+    _partial_: true
+    lr: 0.001
+    weight_decay: 0.001
+  sched_config:
+    mltools:
+      name: cyclicwithwarmup
+      epochs_per_cycle: 30
+    lightning:
+      monitor: valid/total_loss
+      interval: step
+      frequency: 1
+datamodule:
+  _target_: src.datamodules.geant4.Geant4H5DataModule
+  train_conf:
+    data_dir: /srv/beegfs/scratch/groups/dpnc/atlas/ttbar_vflows/data/
+    file_list:
+    - nonvirtual_mc16d_spincorr.h5
+    table_name: atlas_even
+  test_conf:
+    data_dir: /srv/beegfs/scratch/groups/dpnc/atlas/ttbar_vflows/data/
+    file_list:
+    - nonvirtual_mc16d_spincorr.h5
+    table_name: atlas_odd
+  loader_conf:
+    pin_memory: true
+    batch_size: 20
+    num_workers: 2
+  val_frac: 0.1
+loggers:
+  wandb:
+    _target_: pytorch_lightning.loggers.wandb.WandbLogger
+    entity: mleigh
+    offline: false
+    id: qj2e1au5
+    log_model: false
+    project: models
+    name: example
+    save_dir: /home/users/l/leighm/nu2flows/models/example/
+paths:
+  data_dir: /srv/beegfs/scratch/groups/rodem/ttbar_evt_reco/data_share/20220809_ttbar_dilep/
+  output_dir: /home/users/l/leighm/nu2flows
+  root_dir: /home/users/l/leighm/nu2flows
+  full_path: /home/users/l/leighm/nu2flows/models/example/
+callbacks:
+  model_checkpoint:
+    _target_: pytorch_lightning.callbacks.ModelCheckpoint
+    dirpath: /home/users/l/leighm/nu2flows/models/example//checkpoints
+    filename: best_{epoch:03d}
+    monitor: valid/total_loss
+    mode: min
+    save_last: true
+    auto_insert_metric_name: false
+  early_stopping:
+    _target_: pytorch_lightning.callbacks.EarlyStopping
+    monitor: valid/total_loss
+    mode: min
+    patience: 300
+  lr_monitor:
+    _target_: pytorch_lightning.callbacks.LearningRateMonitor
+    logging_interval: step

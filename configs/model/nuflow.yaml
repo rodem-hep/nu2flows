@@ -1,11 +1,11 @@
 _target_: src.models.nuflows.NuFlows
 
 embed_config:
-  hddn_dim: 128
+  hddn_dim: 256
   num_blocks: 1
 
 transformer_config:
-  dim: 64
+  dim: 128
   encoder_config:
     num_layers: 4
     layer_config:
@@ -17,7 +17,7 @@ transformer_config:
       num_heads: 8
 
 flow_config:
-  num_stacks: 4
+  num_stacks: 8
   mlp_width: 128
   mlp_depth: 1
   mlp_act: silu
@@ -38,9 +38,9 @@ optimizer:
 # Config dicts to pass to utils and pytorch lightning
 sched_config:
   mltools:
-    name: warmup
-    # name: cyclicwithwarmup
-    # epochs_per_cycle: 50
+    # name: warmup
+    name: cyclicwithwarmup
+    epochs_per_cycle: 30
 
   lightning:
     monitor: valid/total_loss
