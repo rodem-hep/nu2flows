@@ -10,4 +10,4 @@ datasets:
 # The name of the model to export
 project_name: models
 network_name: example
-batch_size: 512
+batch_size: 1024

@@ -24,6 +24,7 @@ class H5Dataset(Dataset):
         file_list: list,
         data_dir: str,
         n_per_file: int = None,
+        table_name: str = "delphes",
         met_kins: str | list = "px,py",
         lep_kins: str | list = "px,py,pz,log_energy",
         jet_kins: str | list = "px,py,pz,log_energy",
@@ -38,6 +39,8 @@ class H5Dataset(Dataset):
             The location of the datafiles
         n_per_file:
             Maximum number of events to load from each file
+        table_name:
+            The name of the table in the hdf5 file
         met_kins:
             The vars to use for the lepton kinematics
         lep_kins:
@@ -74,7 +77,7 @@ class H5Dataset(Dataset):
         for file in self.file_list:
             log.info(file.name)
             with h5py.File(file, "r") as f:
-                table = f["delphes"]
+                table = f[table_name]
                 self.misc.append(
                     np.vstack([table["njets"][:npf], table["nbjets"][:npf]]).T.astype(
                         "float"

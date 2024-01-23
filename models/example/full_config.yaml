@@ -18,71 +18,58 @@ trainer:
 model:
   _target_: src.models.nuflows.NuFlows
   embed_config:
-    hddn_dim: 128
+    hddn_dim: 256
     num_blocks: 1
   transformer_config:
-    dim: 256
+    dim: 128
     encoder_config:
       num_layers: 4
       layer_config:
-        ff_mult: 2
         num_heads: 8
-        dropout: 0.1
         do_self_attn: true
     classattention_config:
       num_layers: 2
       layer_config:
-        ff_mult: 2
         num_heads: 8
-        dropout: 0.1
-        do_self_attn: false
   flow_config:
-    num_stacks: 4
-    mlp_width: 64
-    mlp_depth: 2
-    mlp_act: lrlu
+    num_stacks: 8
+    mlp_width: 128
+    mlp_depth: 1
+    mlp_act: silu
     tail_bound: 4.0
-    dropout: 0.1
+    dropout: 0
     num_bins: 8
-    do_lu: false
+    flow_type: coupling
+    do_lu: true
     init_identity: true
   optimizer:
     _target_: torch.optim.AdamW
     _partial_: true
     lr: 0.001
-    weight_decay: 0.0001
+    weight_decay: 0.001
   sched_config:
-    utils:
+    mltools:
       name: cyclicwithwarmup
-      epochs_per_cycle: 50
+      epochs_per_cycle: 30
     lightning:
       monitor: valid/total_loss
       interval: step
       frequency: 1
 datamodule:
-  _target_: src.datamodules.dilepton.H5DataModule
+  _target_: src.datamodules.geant4.Geant4H5DataModule
   train_conf:
-    data_dir: /srv/beegfs/scratch/groups/rodem/ttbar_evt_reco/data_share/20220809_ttbar_dilep/
-    met_kins: px,py
-    lep_kins: px,py,pz,log_energy
-    jet_kins: px,py,pz,log_energy
-    nu_kins: px,py,pz
+    data_dir: /srv/beegfs/scratch/groups/dpnc/atlas/ttbar_vflows/data/
     file_list:
-    - events_1_selected.h5
-    - events_2_selected.h5
-    - events_3_selected.h5
-    - events_4_selected.h5
+    - nonvirtual_mc16d_spincorr.h5
+    table_name: atlas_even
   test_conf:
-    data_dir: /srv/beegfs/scratch/groups/rodem/ttbar_evt_reco/data_share/20220809_ttbar_dilep/
-    met_kins: px,py
-    lep_kins: px,py,pz,log_energy
-    jet_kins: px,py,pz,log_energy
-    nu_kins: px,py,pz
+    data_dir: /srv/beegfs/scratch/groups/dpnc/atlas/ttbar_vflows/data/
     file_list:
-    - events_0_selected.h5
+    - nonvirtual_mc16d_spincorr.h5
+    table_name: atlas_odd
   loader_conf:
     pin_memory: true
-    batch_size: 256
+    batch_size: 20
     num_workers: 2
   val_frac: 0.1
 loggers:
@@ -90,7 +77,7 @@ loggers:
     _target_: pytorch_lightning.loggers.wandb.WandbLogger
     entity: mleigh
     offline: false
-    id: 2zd5p2i7
+    id: qj2e1au5
     log_model: false
     project: models
     name: example

@@ -9,7 +9,7 @@ onnx
 onnxruntime
 
 # Specific for the neutrinos
-nflows
+normflows
 pyunfold
 
 # hydra
@@ -39,3 +39,4 @@ dotmap
 pyrootutils
 pre-commit
 rich
+ipykernel
