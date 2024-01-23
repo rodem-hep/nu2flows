@@ -59,18 +59,24 @@ class Geant4H5Dataset(Dataset):
             with h5py.File(file, "r") as f:
                 table = f[table_name]
 
+                # TODO Change this!
+                # For now there is a bug causing some of the neutrinos to be inf
+                # Or really small. We need to filter these out
+                nu = table["neutrinos"][:npf]
+                mask = ~np.isinf(nu).any(axis=(-1, -2))
+
                 # Misc for now is just the number of jets
-                self.misc.append(table["nJets"][:npf][..., None])
+                self.misc.append(table["nJets"][:npf][mask][..., None])
                 self.misc_vars = ["nJets"]
 
                 # The MET is stored in two parts
-                met_x = table["met_x"][:npf][..., None]
-                met_y = table["met_y"][:npf][..., None]
+                met_x = table["met_x"][:npf][mask][..., None]
+                met_y = table["met_y"][:npf][mask][..., None]
                 self.met.append(np.hstack([met_x, met_y]))
 
-                self.lep.append(table["leptons"][:npf])
-                self.jet.append(table["jets"][:npf])
-                self.nu.append(table["neutrinos"][:npf])
+                self.lep.append(table["leptons"][:npf][mask])
+                self.jet.append(table["jets"][:npf][mask])
+                self.nu.append(table["neutrinos"][:npf][mask])
 
         self.misc = np.vstack(self.misc).astype(np.float32)
         self.met = np.vstack(self.met).astype(np.float32)

@@ -39,3 +39,4 @@ dotmap
 pyrootutils
 pre-commit
 rich
+ipykernel
