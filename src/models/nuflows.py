@@ -4,6 +4,7 @@ from typing import Any
 import pytorch_lightning as pl
 import torch as T
 import wandb
+from torch import autocast
 
 from mltools.mltools.flows import rqs_flow
 from mltools.mltools.lightning_utils import standard_optim_sched
@@ -145,11 +146,13 @@ class NuFlows(pl.LightningModule):
         targ = self.get_targets(targets)
 
         # Pass through the flow and get the log likelihood loss
-        flow_loss = self.flow.forward_kld(targ, context=ctxt)
+        with autocast(device_type="cuda", enabled=False):
+            flow_loss = self.flow.forward_kld(targ, context=ctxt)
 
         return flow_loss
 
-    def sample(self, inputs: dict, samples_per_event: int = 256) -> dict:
+    @autocast(device_type="cuda", enabled=False)
+    def sample(self, inputs: dict, samples_per_event: int = 1) -> dict:
         """Generate many points per sample."""
 
         # Get the context from the event feature extractor
@@ -170,7 +173,7 @@ class NuFlows(pl.LightningModule):
         return out_dict
 
     def forward(self, *args) -> Any:
-        """Alias for sample required for onnx export that assumes order."""
+        """Alias for sample required for ONNX export that assumes order."""
         input_dict = {k: v for k, v in zip(self.input_dimensions.keys(), args)}
         sample_dict = self.sample(input_dict)
         return tuple(sample_dict.values())

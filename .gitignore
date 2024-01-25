@@ -5,6 +5,7 @@ logs/
 wandb/
 lightning_logs/
 nu2flows_models/
+plots/
 outputs/
 .vscode/
 container/

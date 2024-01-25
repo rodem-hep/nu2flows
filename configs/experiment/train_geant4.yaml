@@ -1,0 +1,22 @@
+# @package _global_
+defaults:
+  - override /datamodule: geant4.yaml
+
+trainer:
+  precision: 16-mixed
+  max_epochs: 100
+
+datamodule:
+  train_conf:
+    table_name: ${trained_on}
+  test_conf:
+    table_name: ${tested_on}
+  loader_conf:
+    batch_size: 4096
+    num_workers: 4
+
+trained_on: atlas_odd
+tested_on: atlas_even
+
+project_name: nu2flows_geant4
+network_name: v2_trained_on_${trained_on}

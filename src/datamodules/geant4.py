@@ -64,6 +64,7 @@ class Geant4H5Dataset(Dataset):
                 # Or really small. We need to filter these out
                 nu = table["neutrinos"][:npf]
                 mask = ~np.isinf(nu).any(axis=(-1, -2))
+                mask = mask & (nu < 5e5).any(axis=(-1, -2))
 
                 # Misc for now is just the number of jets
                 self.misc.append(table["nJets"][:npf][mask][..., None])
@@ -84,18 +85,6 @@ class Geant4H5Dataset(Dataset):
         self.jet = np.vstack(self.jet).astype(np.float32)
         self.nu = np.vstack(self.nu).astype(np.float32) / 1000  # Nus are in MeV?
         log.info(f"{len(self.met)} events loaded")
-
-        # Clamp the neutrinos because some of them have inf values
-        self.nuy
-
-        np.max(self.misc)
-        np.max(self.met)
-        np.max(self.lep)
-        np.max(self.jet)
-        np.max(self.nu)
-        a = self.nu
-        np.unravel_index(a.argmax(), a.shape)
-        (self.nu[self.nu != np.inf]).max()
 
         # Jets need to be padded so create a mask
         self.jet_mask = ~np.all(self.jet == 0, axis=-1)

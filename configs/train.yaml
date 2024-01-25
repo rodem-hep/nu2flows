@@ -10,6 +10,7 @@ defaults:
   - hydra: default.yaml
   - paths: default.yaml
   - callbacks: default.yaml
+  - experiment: null
 
 seed: 12345 # For reproducibility
 project_name: models # Determines output directory path and wandb project

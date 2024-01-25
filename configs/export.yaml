@@ -5,9 +5,9 @@ defaults:
   - _self_
 
 datasets:
- - events_0_selected.h5
+ - nonvirtual_mc16d_spincorr.h5
 
 # The name of the model to export
-project_name: models
-network_name: example
+project_name: nu2flows_geant4
+network_name: trained_on_atlas_even
 batch_size: 1024

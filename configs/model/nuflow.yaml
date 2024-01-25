@@ -3,12 +3,15 @@ _target_: src.models.nuflows.NuFlows
 embed_config:
   hddn_dim: 256
   num_blocks: 1
+  act_o: silu
+  act_h: silu
 
 transformer_config:
-  dim: 128
+  dim: 256
   encoder_config:
-    num_layers: 4
+    num_layers: 6
     layer_config:
+      dropout: 0.1
       num_heads: 8
       do_self_attn: True
   classattention_config:
@@ -22,10 +25,10 @@ flow_config:
   mlp_depth: 1
   mlp_act: silu
   tail_bound: 4.0
-  dropout: 0
+  dropout: 0.1
   num_bins: 8
   flow_type: coupling
-  do_lu: True # Waiting on normflows to approve PR otherwise it wont work with onnx
+  do_lu: False # Waiting on normflows to approve PR otherwise it wont work with onnx
   init_identity: True
 
 # Full configuration for the model optimizer
@@ -38,9 +41,9 @@ optimizer:
 # Config dicts to pass to utils and pytorch lightning
 sched_config:
   mltools:
+    name: onecycle
     # name: warmup
-    name: cyclicwithwarmup
-    epochs_per_cycle: 30
+    # epochs_per_cycle: 50
 
   lightning:
     monitor: valid/total_loss

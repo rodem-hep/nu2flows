@@ -5,6 +5,8 @@ pytorch-lightning
 torchmetrics
 geomloss
 wandb
+
+# Exporting the models
 onnx
 onnxruntime
 

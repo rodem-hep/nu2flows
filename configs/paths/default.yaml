@@ -1,6 +1,6 @@
 # output dir will be created by hydra
 data_dir: /srv/beegfs/scratch/groups/rodem/ttbar_evt_reco/data_share/20220809_ttbar_dilep/
-output_dir: ${oc.env:PROJECT_ROOT}
+output_dir: /home/users/l/leighm/scratch/Saved_Networks/
 
 # Interpolated
 root_dir: ${oc.env:PROJECT_ROOT}
