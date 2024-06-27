@@ -1,9 +1,9 @@
 from functools import partial
 from typing import Any
 
-import pytorch_lightning as pl
 import torch as T
 import wandb
+from lightning import LightningModule
 from torch import autocast
 
 from mltools.mltools.flows import rqs_flow
@@ -13,7 +13,7 @@ from mltools.mltools.modules import IterativeNormLayer
 from mltools.mltools.transformers import TransformerVectorEncoder
 
 
-class NuFlows(pl.LightningModule):
+class NuFlows(LightningModule):
     """Transformer based conditional normalising flow for neutrino unfolding."""
 
     def __init__(

@@ -1,8 +1,8 @@
 from pathlib import Path
 
-import pyrootutils
+import rootutils
 
-root = pyrootutils.setup_root(search_from=__file__, pythonpath=True)
+root = rootutils.setup_root(search_from=__file__, pythonpath=True)
 
 import logging
 
@@ -22,7 +22,7 @@ log = logging.getLogger(__name__)
 )
 def main(cfg: DictConfig) -> None:
     log.info("Loading run information")
-    orig_cfg = reload_original_config(ckpt_flag="*last*")  # TODO: Change this to best
+    orig_cfg = reload_original_config(ckpt_flag="*best*")
 
     log.info("Loading best checkpoint")
     device = T.device("cuda" if T.cuda.is_available() else "cpu")

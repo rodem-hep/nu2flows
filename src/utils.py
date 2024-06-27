@@ -1,8 +1,8 @@
 from copy import deepcopy
 
-import pyrootutils
+import rootutils
 
-root = pyrootutils.setup_root(search_from=__file__, pythonpath=True)
+root = rootutils.setup_root(search_from=__file__, pythonpath=True)
 
 from pathlib import Path
 

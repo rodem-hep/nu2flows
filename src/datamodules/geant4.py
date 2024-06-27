@@ -5,7 +5,7 @@ from pathlib import Path
 
 import h5py
 import numpy as np
-import pytorch_lightning as pl
+from lightning import LightningDataModule
 from torch.utils.data import DataLoader, Dataset
 
 from mltools.mltools.torch_utils import train_valid_split
@@ -117,7 +117,7 @@ class Geant4H5Dataset(Dataset):
         }
 
 
-class Geant4H5DataModule(pl.LightningDataModule):
+class Geant4H5DataModule(LightningDataModule):
     def __init__(
         self,
         *,

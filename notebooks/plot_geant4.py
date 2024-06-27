@@ -1,8 +1,8 @@
 """Create a simple plot to check if the neutrino unfolding is working as expected."""
 
-import pyrootutils
+import rootutils
 
-root = pyrootutils.setup_root(
+root = rootutils.setup_root(
     search_from="/home/users/l/leighm/nu2flows", pythonpath=True
 )
 
@@ -17,25 +17,21 @@ from src.datamodules.physics import Mom4Vec
 from src.utils import read_geant4_file
 
 # Paths to the relevant files
-data_file = "/srv/beegfs/scratch/groups/dpnc/atlas/ttbar_vflows/data/nonvirtual_mc16d_spincorr.h5"
-model_file = "/home/users/l/leighm/scratch/Saved_Networks/nu2flows_geant4/trained_on_atlas_even/outputs/nonvirtual_mc16d_spincorr.h5"
+data_file = "/srv/beegfs/scratch/groups/dpnc/atlas/ttbar_vflows/data/nonvirtual_mc16d_spincorr.h5"  # noqa
+model_file = "/home/users/l/leighm/scratch/Saved_Networks/nu2flows_geant4/trained_on_atlas_even/outputs/nonvirtual_mc16d_spincorr.h5"  # noqa
 
 # Define the variables to plot
-nuflow = DotMap(
-    {
-        "name": "nu2flows",
-        "label": r"$\nu^2$-Flows",
-        "hist_kwargs": {"color": "b"},
-    }
-)
-nutruth = DotMap(
-    {
-        "name": "truth_nu",
-        "label": r"$\nu$-Truth",
-        "hist_kwargs": {"color": "grey", "fill": True, "alpha": 0.5},
-        "err_kwargs": {"color": "grey", "hatch": "///"},
-    }
-)
+nuflow = DotMap({
+    "name": "nu2flows",
+    "label": r"$\nu^2$-Flows",
+    "hist_kwargs": {"color": "b"},
+})
+nutruth = DotMap({
+    "name": "truth_nu",
+    "label": r"$\nu$-Truth",
+    "hist_kwargs": {"color": "grey", "fill": True, "alpha": 0.5},
+    "err_kwargs": {"color": "grey", "hatch": "///"},
+})
 
 
 # Load the event data from the file

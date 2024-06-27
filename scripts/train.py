@@ -1,11 +1,11 @@
-import pyrootutils
+import rootutils
 
-root = pyrootutils.setup_root(search_from=__file__, pythonpath=True)
+root = rootutils.setup_root(search_from=__file__, pythonpath=True)
 
 import logging
 
 import hydra
-import pytorch_lightning as pl
+import lightning as L
 import torch as T
 from omegaconf import DictConfig
 
@@ -31,7 +31,7 @@ def main(cfg: DictConfig) -> None:
 
     if cfg.seed:
         log.info(f"Setting seed to: {cfg.seed}")
-        pl.seed_everything(cfg.seed, workers=True)
+        L.seed_everything(cfg.seed, workers=True)
 
     if cfg.precision:
         log.info(f"Setting matrix precision to: {cfg.precision}")

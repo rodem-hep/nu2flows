@@ -1,13 +1,12 @@
-import pyrootutils
+import rootutils
 
-root = pyrootutils.setup_root(search_from=__file__, pythonpath=True)
+root = rootutils.setup_root(search_from=__file__, pythonpath=True)
 
 from mltools.mltools.utils import standard_job_array
 
 
 def main() -> None:
     """Main executable script."""
-
     standard_job_array(
         job_name="nuflows",
         work_dir=f"{root}/scripts",

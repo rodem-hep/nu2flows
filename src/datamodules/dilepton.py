@@ -5,11 +5,11 @@ from pathlib import Path
 
 import h5py
 import numpy as np
-import pytorch_lightning as pl
-from mltools.mltools.torch_utils import train_valid_split
+from lightning import LightningDataModule
 from numpy.lib.recfunctions import structured_to_unstructured as stu
 from torch.utils.data import DataLoader, Dataset
 
+from mltools.mltools.torch_utils import train_valid_split
 from src.datamodules.physics import change_from_ptetaphiE
 
 log = logging.getLogger(__name__)
@@ -154,7 +154,7 @@ class H5Dataset(Dataset):
         }
 
 
-class H5DataModule(pl.LightningDataModule):
+class H5DataModule(LightningDataModule):
     def __init__(
         self,
         *,
