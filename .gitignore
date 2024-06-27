@@ -2,21 +2,30 @@
 __pycache__
 data/
 logs/
-wandb/
-lightning_logs/
-nu2flows_models/
 outputs/
+plots/
 .vscode/
 container/
+wandb/
+configs/sweeps/
 slurmscripts/
-logs/
-.hydra/
-*mypy*
+user**/**
+**user**
+*.snakemake
+*.pytest
+.config/
+.nv/
+
+# Anything with cache in the name, pytest, ruff, or wandb...
+*cache*
 
 # File types
+launch.json
+.mypy*
+*workspace
 *.pyc
 *.ipynb
 *.out
 *.sh
 *.log
-*workspace
+*.idea

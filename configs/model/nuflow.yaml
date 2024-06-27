@@ -8,9 +8,10 @@ transformer_config:
   dim: 128
   encoder_config:
     num_layers: 4
+    num_registers: 4
+    do_packed: True
     layer_config:
       num_heads: 8
-      do_self_attn: True
   classattention_config:
     num_layers: 2
     layer_config:
@@ -22,10 +23,10 @@ flow_config:
   mlp_depth: 1
   mlp_act: silu
   tail_bound: 4.0
-  dropout: 0
+  dropout: 0.1
   num_bins: 8
   flow_type: coupling
-  do_lu: True # Waiting on normflows to approve PR otherwise it wont work with onnx
+  do_lu: False # Waiting on normflows to approve PR otherwise it wont work with onnx
   init_identity: True
 
 # Full configuration for the model optimizer
@@ -36,13 +37,8 @@ optimizer:
   weight_decay: 1.0e-3
 
 # Config dicts to pass to utils and pytorch lightning
-sched_config:
-  mltools:
-    # name: warmup
-    name: cyclicwithwarmup
-    epochs_per_cycle: 30
-
-  lightning:
-    monitor: valid/total_loss
-    interval: step
-    frequency: 1
+scheduler:
+  _target_: mltools.mltools.lightning_utils.linear_warmup_cosine_decay
+  _partial_: true
+  warmup_steps: 1_000
+  total_steps: null # Replaced by trainer max_steps for a one cycle

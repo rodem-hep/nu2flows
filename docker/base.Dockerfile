@@ -1,6 +1,12 @@
-FROM pytorch/pytorch:2.1.0-cuda11.8-cudnn8-devel
+FROM pytorch/pytorch:2.3.1-cuda12.1-cudnn8-devel
 
+# Local and environment variables
+ENV LANG C.UTF-8
+ENV LC_ALL C.UTF-8
+ENV PIP_ROOT_USER_ACTION=ignore
+ENV PIP_NO_CACHE_DIR=false
 ARG DEBIAN_FRONTEND=noninteractive
+WORKDIR /nu2flows
 
 RUN apt-get -y update && \
     apt-get -y upgrade && \
@@ -19,13 +25,12 @@ RUN apt-get -y update && \
         texlive-fonts-recommended \
         dvipng
 
-COPY requirements.txt .
 
-RUN conda update conda
-RUN conda update conda-build
-RUN conda install pip
-
+# Update python pip
 RUN python -m pip install --upgrade pip
-RUN python -m pip install --upgrade -r requirements.txt
+RUN python --version
+RUN python -m pip --version
 
-RUN export CUDA_PATH=/opt/conda/
+# Install using uv
+COPY requirements.txt .
+RUN python -m uv install -r requirements.txt

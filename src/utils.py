@@ -16,13 +16,13 @@ from src.datamodules.physics import Mom4Vec, delR
 
 def read_dilepton_file(file_path: Path, require_tops: bool = False) -> DotMap:
     """Reads in data from an HDF file, returning the collection of information as a
-    DotMap object."""
-
+    DotMap object.
+    """
     # Read the delphes table as a dotmap object
     file_data = DotMap()
     with h5py.File(file_path, "r") as f:
         table = f["delphes"]
-        for key in table.keys():
+        for key in table:
             try:
                 file_data[key] = rf.structured_to_unstructured(table[key][:])
             except Exception:

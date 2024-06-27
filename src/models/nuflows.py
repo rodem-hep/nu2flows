@@ -4,9 +4,8 @@ from typing import Any
 import pytorch_lightning as pl
 import torch as T
 import wandb
-
 from mltools.mltools.flows import rqs_flow
-from mltools.mltools.lightning_utils import standard_optim_sched
+from mltools.mltools.lightning_utils import simple_optim_sched
 from mltools.mltools.mlp import MLP
 from mltools.mltools.modules import IterativeNormLayer
 from mltools.mltools.transformers import TransformerVectorEncoder
@@ -23,11 +22,10 @@ class NuFlows(pl.LightningModule):
         embed_config: dict,
         transformer_config: dict,
         flow_config: dict,
-        sched_config: dict,
+        scheduler: partial,
         optimizer: partial,
     ) -> None:
-        """
-        Parameters
+        """Parameters
         ----------
         input_dimensions : dict
             Dictionary containing the names and dimensions of each of the inputs
@@ -77,16 +75,12 @@ class NuFlows(pl.LightningModule):
             The second element is a boolean mask of shape (batch x N) to allow
             for padding.
         """
-
         # Loop through each of the inputs
         embeddings = []
         all_mask = []
-        for key, inpt in inputs.items():
+        for key, sample in inputs.items():
             # Check if a mask was provided or create one
-            if isinstance(inpt, tuple | list):
-                inpt, mask = inpt
-            else:
-                mask = None
+            inpt, mask = sample if isinstance(sample, tuple | list) else (sample, None)
 
             # Check that the input has a multiplicity dimension
             if inpt.ndim == 2:
@@ -112,7 +106,7 @@ class NuFlows(pl.LightningModule):
         all_mask = T.cat(all_mask, dim=1)
 
         # Pass the combined tensor through the transformer and return
-        return self.transformer(embeddings, kv_mask=all_mask)
+        return self.transformer(embeddings, mask=all_mask)
 
     def get_targets(self, targets: dict) -> T.Tensor:
         """Unpack the target dictionary as a single tensor."""
@@ -128,7 +122,6 @@ class NuFlows(pl.LightningModule):
 
     def on_fit_start(self, *_args) -> None:
         """Function to run at the start of training."""
-
         # Define the metrics for wandb (otherwise the min wont be stored!)
         if wandb.run is not None:
             wandb.define_metric("train/total_loss", summary="min")
@@ -136,7 +129,6 @@ class NuFlows(pl.LightningModule):
 
     def _shared_step(self, sample: tuple) -> T.Tensor:
         """Shared step for training and validation."""
-
         # Unpack the sample
         inputs, targets = sample
 
@@ -145,13 +137,10 @@ class NuFlows(pl.LightningModule):
         targ = self.get_targets(targets)
 
         # Pass through the flow and get the log likelihood loss
-        flow_loss = self.flow.forward_kld(targ, context=ctxt)
-
-        return flow_loss
+        return self.flow.forward_kld(targ, context=ctxt)
 
     def sample(self, inputs: dict, samples_per_event: int = 256) -> dict:
         """Generate many points per sample."""
-
         # Get the context from the event feature extractor
         ctxt = self.get_context(inputs)
 
@@ -171,24 +160,19 @@ class NuFlows(pl.LightningModule):
 
     def forward(self, *args) -> Any:
         """Alias for sample required for onnx export that assumes order."""
-        input_dict = {k: v for k, v in zip(self.input_dimensions.keys(), args)}
-        sample_dict = self.sample(input_dict)
+        input_dict = dict(zip(self.input_dimensions.keys(), args, strict=False))
+        sample_dict = self.sample(input_dict, 1)
         return tuple(sample_dict.values())
 
     def training_step(self, batch: tuple, _batch_idx: int) -> T.Tensor:
-        flow_loss = self._shared_step(batch)
-        self.log("train/total_loss", flow_loss)
-        return flow_loss
+        return self._shared_step(batch)
 
     def validation_step(self, batch: tuple, batch_idx: int) -> T.Tensor:
-        flow_loss = self._shared_step(batch)
-        self.log("valid/total_loss", flow_loss)
-        return flow_loss
+        return self._shared_step(batch)
 
     def predict_step(self, batch: tuple, _batch_idx: int) -> dict:
         """Single prediction step which add generates samples."""
-        inputs, targets = batch
-        return self.sample(inputs)
+        return self.sample(batch[0])
 
     def configure_optimizers(self) -> dict:
-        return standard_optim_sched(self)
+        return simple_optim_sched(self)

@@ -4,6 +4,7 @@ network_name: example
 ckpt_path: null
 precision: medium
 full_resume: false
+
 trainer:
   _target_: pytorch_lightning.Trainer
   min_epochs: 1
@@ -15,6 +16,7 @@ trainer:
   check_val_every_n_epoch: 1
   gradient_clip_val: 10
   default_root_dir: /home/users/l/leighm/nu2flows
+
 model:
   _target_: src.models.nuflows.NuFlows
   embed_config:
@@ -55,6 +57,7 @@ model:
       monitor: valid/total_loss
       interval: step
       frequency: 1
+
 datamodule:
   _target_: src.datamodules.geant4.Geant4H5DataModule
   train_conf:
@@ -72,6 +75,7 @@ datamodule:
     batch_size: 20
     num_workers: 2
   val_frac: 0.1
+
 loggers:
   wandb:
     _target_: pytorch_lightning.loggers.wandb.WandbLogger
@@ -82,11 +86,13 @@ loggers:
     project: models
     name: example
     save_dir: /home/users/l/leighm/nu2flows/models/example/
+
 paths:
   data_dir: /srv/beegfs/scratch/groups/rodem/ttbar_evt_reco/data_share/20220809_ttbar_dilep/
   output_dir: /home/users/l/leighm/nu2flows
   root_dir: /home/users/l/leighm/nu2flows
   full_path: /home/users/l/leighm/nu2flows/models/example/
+
 callbacks:
   model_checkpoint:
     _target_: pytorch_lightning.callbacks.ModelCheckpoint

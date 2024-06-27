@@ -1,9 +1,9 @@
 """A collection of functions for particle physics calulations."""
+
 from __future__ import annotations  # Needed for type hinting itself
 
 import numpy as np
 import torch as T
-
 from mltools.mltools.torch_utils import empty_0dim_like
 
 
@@ -22,21 +22,24 @@ class Mom4Vec:
         final_is_mass: bool = False,
         n_mom: int | None = None,
     ) -> None:
-        """
-        args:
-            data: The input array where the last dimension points to the coordinates
-            oth: Other data which is not used as part of the momentum
-        kwargs:
-            is_cartesian: If the data provided is wrt cartesian coordinates
-                True:  self.mom = [px, py, px, E or M]
-                False: self.mom = [pt, eta, phi, E or M]
-            final_is_mass:
-                If true then the 4th variable in the tensor is taken to be mass instead
-                of energy
-            n_mom: How many variables in the list refer to momentum
-                If none it infers from the shape
-        """
+        """Initialize the class with the four momentum.
 
+        Parameters
+        ----------
+        data : array_like
+            The input array where the last dimension points to the coordinates.
+        oth : object
+            Other data which is not used as part of the momentum.
+        is_cartesian : bool, optional
+            If the data provided is with respect to cartesian coordinates.
+            - True: self.mom = [px, py, pz, E or M]
+            - False: self.mom = [pt, eta, phi, E or M]
+        final_is_mass : bool, optional
+            If true, then the 4th variable in the tensor is taken to be mass.
+        n_mom : int, optional
+            How many variables in the list refer to momentum.
+            If none, it infers from the shape.
+        """
         # Save the attributes
         self.is_cartesian = is_cartesian
         if isinstance(data, T.Tensor):
@@ -44,7 +47,7 @@ class Mom4Vec:
         elif isinstance(data, np.ndarray):
             self.is_tensor = False
         else:
-            raise ValueError(
+            raise TypeError(
                 "Mom4Vec is not able to tell if data is a torch tensor "
                 "or a numpy array!"
             )
@@ -84,11 +87,10 @@ class Mom4Vec:
         # The leftover tensor which holds the rest of the variables
         if oth is None:
             self.oth = data[..., n_mom:]
+        elif self.is_tensor:
+            self.oth = T.cat([data[..., n_mom:], oth], dim=-1)
         else:
-            if self.is_tensor:
-                self.oth = T.cat([data[..., n_mom:], oth], dim=-1)
-            else:
-                self.oth = np.concatenate([data[..., n_mom:], oth], axis=-1)
+            self.oth = np.concatenate([data[..., n_mom:], oth], axis=-1)
 
     @property
     def shape(self) -> tuple:
@@ -102,8 +104,7 @@ class Mom4Vec:
             if self.is_tensor:
                 pt = T.from_numpy(pt)
             return pt
-        else:
-            return self.mom[..., 0:1]
+        return self.mom[..., 0:1]
 
     @property
     def eta(self) -> np.ndarray | T.Tensor:
@@ -112,40 +113,35 @@ class Mom4Vec:
             return np.arctanh(
                 np.clip((self.pz / (self.p3_mag + 1e-8)), 1e-6 - 1, 1 - 1e-6)
             )
-        else:
-            return self.mom[..., 1:2]
+        return self.mom[..., 1:2]
 
     @property
     def phi(self) -> np.ndarray | T.Tensor:
         """Return the polar angle."""
         if self.is_cartesian:
             return np.arctan2(self.py, self.px)
-        else:
-            return self.mom[..., 2:3]
+        return self.mom[..., 2:3]
 
     @property
     def px(self) -> np.ndarray | T.Tensor:
         """Return the momentum x component."""
         if self.is_cartesian:
             return self.mom[..., 0:1]
-        else:
-            return self.pt * np.cos(self.phi)
+        return self.pt * np.cos(self.phi)
 
     @property
     def py(self) -> np.ndarray | T.Tensor:
         """Return the momentum y component."""
         if self.is_cartesian:
             return self.mom[..., 1:2]
-        else:
-            return self.pt * np.sin(self.phi)
+        return self.pt * np.sin(self.phi)
 
     @property
     def pz(self) -> np.ndarray | T.Tensor:
         """Return the momentum z component."""
         if self.is_cartesian:
             return self.mom[..., 2:3]
-        else:
-            return self.pt * np.sinh(self.eta)
+        return self.pt * np.sinh(self.eta)
 
     @property
     def p3_mag(self) -> np.ndarray | T.Tensor:
@@ -155,8 +151,7 @@ class Mom4Vec:
             if self.is_tensor:
                 p3_mag = T.from_numpy(p3_mag)
             return p3_mag
-        else:
-            return self.pt * np.cosh(self.eta)
+        return self.pt * np.cosh(self.eta)
 
     @property
     def energy(self) -> np.ndarray | T.Tensor:
@@ -180,11 +175,7 @@ class Mom4Vec:
             return np.sqrt(
                 np.abs(self.energy**2 - (self.px**2 + self.py**2 + self.pz**2))
             )
-        else:
-            mass = np.sqrt(
-                np.abs(self.energy**2 - (self.pt * np.cosh(self.eta)) ** 2)
-            )
-            return mass
+        return np.sqrt(np.abs(self.energy**2 - (self.pt * np.cosh(self.eta)) ** 2))
 
     @property
     def m(self) -> np.ndarray | T.Tensor:
@@ -223,43 +214,43 @@ class Mom4Vec:
         if self.is_cartesian:
             return
 
-        else:
-            px = self.px.clone() if self.is_tensor else self.px.copy()
-            py = self.py.clone() if self.is_tensor else self.py.copy()
-            pz = self.pz.clone() if self.is_tensor else self.pz.copy()
-            self.mom[..., 0:1] = px
-            self.mom[..., 1:2] = py
-            self.mom[..., 2:3] = pz
-            self.is_cartesian = True
+        px = self.px.clone() if self.is_tensor else self.px.copy()
+        py = self.py.clone() if self.is_tensor else self.py.copy()
+        pz = self.pz.clone() if self.is_tensor else self.pz.copy()
+        self.mom[..., 0:1] = px
+        self.mom[..., 1:2] = py
+        self.mom[..., 2:3] = pz
+        self.is_cartesian = True
 
     def to_spherical(self) -> None:
         """Changes the saved momentum tensor to spherical inplace."""
         if not self.is_cartesian:
             return
 
-        else:
-            pt = self.pt.clone() if self.is_tensor else self.pt.copy()
-            eta = self.eta.clone() if self.is_tensor else self.eta.copy()
-            phi = self.phi.clone() if self.is_tensor else self.phi.copy()
-            self.mom[..., 0:1] = pt
-            self.mom[..., 1:2] = eta
-            self.mom[..., 2:3] = phi
-            self.is_cartesian = False
+        pt = self.pt.clone() if self.is_tensor else self.pt.copy()
+        eta = self.eta.clone() if self.is_tensor else self.eta.copy()
+        phi = self.phi.clone() if self.is_tensor else self.phi.copy()
+        self.mom[..., 0:1] = pt
+        self.mom[..., 1:2] = eta
+        self.mom[..., 2:3] = phi
+        self.is_cartesian = False
 
     def __add__(self, other: Mom4Vec) -> Mom4Vec:
         """Add two collections of four momentum together."""
-        assert self.is_cartesian and other.is_cartesian
+        assert self.is_cartesian
+        assert other.is_cartesian
         return Mom4Vec(self.mom + other.mom, is_cartesian=True)
 
     def __sub__(self, other: Mom4Vec) -> Mom4Vec:
         """Subtract two collections of four momentum together."""
-        assert self.is_cartesian and other.is_cartesian
+        assert self.is_cartesian
+        assert other.is_cartesian
         return Mom4Vec(self.mom - other.mom, is_cartesian=True)
 
     def __mul__(self, a: Mom4Vec | float) -> float | Mom4Vec:
         """Multiply by a float or another 4 vector."""
         # Multiply the momentum values by a scalar
-        if isinstance(a, (float, int)):
+        if isinstance(a, (float | int)):
             px = self.px * a
             py = self.py * a
             pz = self.pz * a
@@ -269,16 +260,12 @@ class Mom4Vec:
             return Mom4Vec(mom, oth=self.oth)
 
         # Lotentz dot product
-        if isinstance(a, Mom4Vec):
-            return self.E * a.E - self.px * a.px - self.py * a.py - self.pz * a.pz
+        return self.E * a.E - self.px * a.px - self.py * a.py - self.pz * a.pz
 
     def __getitem__(self, idx: int | np.ndarray | slice) -> Mom4Vec:
         """Index, mask or slice the object."""
         if isinstance(idx, int):
-            if idx == -1:
-                idx = slice(idx, None)
-            else:
-                idx = slice(idx, idx + 1)
+            idx = slice(idx, None) if idx == -1 else slice(idx, idx + 1)
         return Mom4Vec(self.mom[idx], self.oth[idx], is_cartesian=self.is_cartesian)
 
     def __repr__(self) -> str:
@@ -307,21 +294,23 @@ def change_from_ptetaphiE(
         new_names: The new coords to calculate
         n_dim: The number of dimensions to transform, if 0 it will be assumed
 
-    Returns:
+    Returns
+    -------
         new_values, new_names
     """
-
     # Allow a string to be given which can be seperated into a list
     old_names = old_cords.split(",") if isinstance(old_cords, str) else old_cords
     new_names = new_cords.split(",") if isinstance(new_cords, str) else new_cords
 
     # List of supported new names
     for new_nm in new_names:
-        if new_nm not in [
+        if new_nm not in {
             "pt",
             "log_pt",
             "energy",
             "log_energy",
+            "mass",
+            "log_mass",
             "phi",
             "cos",
             "sin",
@@ -329,7 +318,7 @@ def change_from_ptetaphiE(
             "px",
             "py",
             "pz",
-        ]:
+        }:
             raise ValueError(f"Unknown coordinate name: {new_nm}")
 
     # Calculate the number of kinematic features in the final dimension
@@ -348,7 +337,7 @@ def change_from_ptetaphiE(
 
     # A dictionary for calculating the supported new variables
     # Using lambda functions like this prevents execution every time
-    new_coord_fns = {
+    fns = {
         "pt": lambda: pt,
         "log_pt": lambda: np.log(pt + 1e-8),
         "energy": lambda: eng,
@@ -362,13 +351,15 @@ def change_from_ptetaphiE(
         "pz": lambda: pt * np.sinh(eta),
         "oth": lambda: oth,
     }
+    fns["mass"] = lambda: np.sqrt(np.abs(eng**2 - pt**2 - fns["pz"]() ** 2))
+    fns["log_mass"] = lambda: np.log(fns["mass"]() + 1e-8)
 
     # Create a dictionary of the requested coordinates then trim non empty values
-    new_coords = {key: new_coord_fns[key]() for key in new_names}
+    new_coords = {key: fns[key]() for key in new_names}
     new_coords = {key: val for key, val in new_coords.items() if val.shape[-1] != 0}
 
     # Return the combined tensors and the collection of new names (with unchanged)
-    new_vals = np.concatenate(list(new_coords.values()) + [oth], axis=-1)
+    new_vals = np.concatenate([*list(new_coords.values()), oth], axis=-1)
     new_names = list(new_coords.keys())
     new_names += old_names[n_dim:]
 
@@ -385,8 +376,8 @@ def nu_sol_comps(
     nu_py: np.ndarray,
 ) -> np.ndarray:
     """Calculate the components of the quadratic solution for neutrino
-    pseudorapidity."""
-
+    pseudorapidity.
+    """
     # Constants NuRegData is in GeV!
     w_mass = 80379 * 1e-3
     e_mass = 0.511 * 1e-3
@@ -418,7 +409,8 @@ def combine_comps(
     nu_pt: np.ndarray = None,
     return_both: bool = False,
 ) -> np.ndarray:
-    """Combine the quadiratic solutions and pick one depending on complexity and size
+    """Combine the quadiratic solutions and pick one depending on complexity and size.
+
     args:
         comp_1: First component of the quadratic
         comp_2: Signed root of the second component of the quadratic
@@ -427,7 +419,6 @@ def combine_comps(
         nu_pt: The neutrino pt, needed only if return_eta is true
         return_both: Return both solutions
     """
-
     # comp_2 is already rooted, so the real component is taken to be 0 if negative
     comp_2_real = np.where(comp_2 > 0, comp_2, np.zeros_like(comp_2))
 
@@ -450,5 +441,4 @@ def combine_comps(
     # Return correct variable
     if return_eta:
         return np.arctanh(sol / np.sqrt(sol**2 + nu_pt**2 + 1e-8))
-    else:
-        return sol
+    return sol
