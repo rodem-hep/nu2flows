@@ -16,12 +16,11 @@ from src.datamodules.physics import Mom4Vec, delR
 
 def read_geant4_file(file_path: Path, table_name: str) -> DotMap:
     """Reads in an hdf5 file from the geant4 dataset."""
-
     # Read the delphes table as a dotmap object
     file_data = DotMap()
     with h5py.File(file_path, "r") as f:
         table = f[table_name]
-        for key in table.keys():
+        for key in table:
             file_data[key] = table[key][:]
 
     # Remove all bad neutrinos
@@ -30,16 +29,17 @@ def read_geant4_file(file_path: Path, table_name: str) -> DotMap:
     mask = mask & (nu < 5e5).any(axis=(-1, -2))
 
     # Apply the mask to all entries
-    for key in file_data.keys():
+    for key in file_data:
         file_data[key] = file_data[key][mask]
 
     # Neutrinos are the particles in MeV
     file_data["neutrinos"] /= 1000
 
     # Merge the met_x and met_y columns into a single column
-    file_data["MET"] = np.hstack(
-        [file_data["met_x"][..., None], file_data["met_y"][..., None]]
-    )
+    file_data["MET"] = np.hstack([
+        file_data["met_x"][..., None],
+        file_data["met_y"][..., None],
+    ])
 
     # Change the particle entries to 4 vector objects
     for key in ["MET", "neutrinos", "leptons", "jets"]:
@@ -51,13 +51,13 @@ def read_geant4_file(file_path: Path, table_name: str) -> DotMap:
 
 def read_dilepton_file(file_path: Path, require_tops: bool = False) -> DotMap:
     """Reads in data from an HDF file, returning the collection of information as a
-    DotMap object."""
-
+    DotMap object.
+    """
     # Read the delphes table as a dotmap object
     file_data = DotMap()
     with h5py.File(file_path, "r") as f:
         table = f["delphes"]
-        for key in table.keys():
+        for key in table:
             try:
                 file_data[key] = rf.structured_to_unstructured(table[key][:])
             except Exception:

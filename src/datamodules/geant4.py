@@ -1,7 +1,7 @@
 import logging
+from collections.abc import Mapping
 from copy import deepcopy
 from pathlib import Path
-from typing import Mapping
 
 import h5py
 import numpy as np
@@ -21,11 +21,10 @@ class Geant4H5Dataset(Dataset):
         *,
         file_list: list,
         data_dir: str,
-        n_per_file: int = None,
+        n_per_file: int | None = None,
         table_name: str = "atlas_even",
     ) -> None:
-        """
-        Parameters
+        """Parameters
         ----------
         file_list:
             List of datasets to load
@@ -59,7 +58,7 @@ class Geant4H5Dataset(Dataset):
             with h5py.File(file, "r") as f:
                 table = f[table_name]
 
-                # TODO Change this!
+                # Change this!
                 # For now there is a bug causing some of the neutrinos to be inf
                 # Or really small. We need to filter these out
                 nu = table["neutrinos"][:npf]
@@ -149,7 +148,7 @@ class Geant4H5DataModule(pl.LightningDataModule):
         self.miniset = Geant4H5Dataset(**mini_conf)
 
     def setup(self, stage: str) -> None:
-        if stage in ["fit", "validate"]:
+        if stage in {"fit", "validate"}:
             self.dataset = Geant4H5Dataset(**self.hparams.train_conf)
             # self.dataset.plot_variables("plots")
             self.train_set, self.valid_set = train_valid_split(
@@ -158,7 +157,7 @@ class Geant4H5DataModule(pl.LightningDataModule):
             self.n_train_samples = len(self.train_set)
             self.n_valid_samples = len(self.valid_set)
 
-        if stage in ["test", "predict"]:
+        if stage in {"test", "predict"}:
             self.test_set = Geant4H5Dataset(**self.hparams.test_conf)
             self.n_test_samples = len(self.test_set)
 

@@ -1,23 +1,24 @@
 # pytorch / deep learning
 torch
-torchvision
-pytorch-lightning
 torchmetrics
-geomloss
+lightning
 wandb
-
-# Exporting the models
+normflows
 onnx
 onnxruntime
 
+# flash attention 2
+packaging
+ninja
+flash-attn
+
 # Specific for the neutrinos
-normflows
-pyunfold
+git+https://github.com/VincentStimper/normalizing-flows.git
 
 # hydra
+omegaconf
 hydra-core
 hydra-colorlog
-hydra-optuna-sweeper
 
 # plotting
 matplotlib
@@ -27,18 +28,17 @@ plotly
 # data science
 numpy
 scipy
-scikit-learn
 scikit-hep
-pandas
-tables
-h5py
+scikit-learn
 pykeops
 
 # other
-black
+ruff
+tqdm
 pylint
 dotmap
-pyrootutils
+rootutils
 pre-commit
 rich
-ipykernel
+pytest
+

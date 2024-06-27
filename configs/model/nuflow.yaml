@@ -9,11 +9,12 @@ embed_config:
 transformer_config:
   dim: 256
   encoder_config:
-    num_layers: 6
+    num_layers: 4
+    num_registers: 4
+    do_packed: True
     layer_config:
       dropout: 0.1
       num_heads: 8
-      do_self_attn: True
   classattention_config:
     num_layers: 2
     layer_config:
@@ -39,13 +40,8 @@ optimizer:
   weight_decay: 1.0e-3
 
 # Config dicts to pass to utils and pytorch lightning
-sched_config:
-  mltools:
-    name: onecycle
-    # name: warmup
-    # epochs_per_cycle: 50
-
-  lightning:
-    monitor: valid/total_loss
-    interval: step
-    frequency: 1
+scheduler:
+  _target_: mltools.mltools.lightning_utils.linear_warmup_cosine_decay
+  _partial_: true
+  warmup_steps: 1_000
+  total_steps: null # Replaced by trainer max_steps for a one cycle

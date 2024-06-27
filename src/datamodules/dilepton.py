@@ -1,15 +1,15 @@
 import logging
+from collections.abc import Mapping
 from copy import deepcopy
 from pathlib import Path
-from typing import Mapping
 
 import h5py
 import numpy as np
-import numpy.lib.recfunctions as rf
 import pytorch_lightning as pl
+from mltools.mltools.torch_utils import train_valid_split
+from numpy.lib.recfunctions import structured_to_unstructured as stu
 from torch.utils.data import DataLoader, Dataset
 
-from mltools.mltools.torch_utils import train_valid_split
 from src.datamodules.physics import change_from_ptetaphiE
 
 log = logging.getLogger(__name__)
@@ -23,15 +23,14 @@ class H5Dataset(Dataset):
         *,
         file_list: list,
         data_dir: str,
-        n_per_file: int = None,
+        n_per_file: int | None = None,
         table_name: str = "delphes",
         met_kins: str | list = "px,py",
         lep_kins: str | list = "px,py,pz,log_energy",
         jet_kins: str | list = "px,py,pz,log_energy",
         nu_kins: str | list = "px,py,pz",
     ) -> None:
-        """
-        Parameters
+        """Parameters
         ----------
         file_list:
             List of datasets to load
@@ -84,10 +83,10 @@ class H5Dataset(Dataset):
                     )
                 )
                 self.misc_vars = ["njets", "nbjets"]
-                self.met.append(rf.structured_to_unstructured(table["MET"][:npf]))
-                self.lep.append(rf.structured_to_unstructured(table["leptons"][:npf]))
-                self.jet.append(rf.structured_to_unstructured(table["jets"][:npf]))
-                self.nu.append(rf.structured_to_unstructured(table["neutrinos"][:npf]))
+                self.met.append(stu(table["MET"][:npf]))
+                self.lep.append(stu(table["leptons"][:npf]))
+                self.jet.append(stu(table["jets"][:npf]))
+                self.nu.append(stu(table["neutrinos"][:npf]))
                 self.met_vars = table["MET"].dtype.names
                 self.lep_vars = table["leptons"].dtype.names
                 self.jet_vars = table["jets"].dtype.names
@@ -186,7 +185,7 @@ class H5DataModule(pl.LightningDataModule):
         self.miniset = H5Dataset(**mini_conf)
 
     def setup(self, stage: str) -> None:
-        if stage in ["fit", "validate"]:
+        if stage in {"fit", "validate"}:
             self.dataset = H5Dataset(**self.hparams.train_conf)
             # self.dataset.plot_variables("plots")
             self.train_set, self.valid_set = train_valid_split(
@@ -195,7 +194,7 @@ class H5DataModule(pl.LightningDataModule):
             self.n_train_samples = len(self.train_set)
             self.n_valid_samples = len(self.valid_set)
 
-        if stage in ["test", "predict"]:
+        if stage in {"test", "predict"}:
             self.test_set = H5Dataset(**self.hparams.test_conf)
             self.n_test_samples = len(self.test_set)
 
