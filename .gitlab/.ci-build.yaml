@@ -7,6 +7,6 @@ build_docker: &build_docker
   variables:
     IMAGE_DESTINATION: $CI_REGISTRY_IMAGE:latest
   script:
-    - /kaniko/executor --context $CI_PROJECT_DIR --dockerfile $CI_PROJECT_DIR/docker/Dockerfile --destination $IMAGE_DESTINATION --cache=true
+    - /kaniko/executor --context $CI_PROJECT_DIR --dockerfile $CI_PROJECT_DIR/docker/Dockerfile --destination $IMAGE_DESTINATION --cache=false
   rules:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH

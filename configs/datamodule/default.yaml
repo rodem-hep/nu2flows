@@ -23,7 +23,8 @@ test_conf:
 
 loader_conf:
   pin_memory: True
-  batch_size: 2048
-  num_workers: 2
+  batch_size: 4096
+  num_workers: 6
+  shuffle: True
 
 val_frac: 0.1

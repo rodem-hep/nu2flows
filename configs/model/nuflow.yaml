@@ -40,7 +40,7 @@ flow_config:
 optimizer:
   _target_: torch.optim.AdamW
   _partial_: true
-  lr: 1.0e-4
+  lr: 1.0e-3
   weight_decay: 1.0e-4
 
 scheduler:
