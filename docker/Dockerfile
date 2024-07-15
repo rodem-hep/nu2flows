@@ -31,6 +31,6 @@ RUN python -m pip install --upgrade pip
 RUN python --version
 RUN python -m pip --version
 
-# Install using uv
+# Intall python dependencies
 COPY requirements.txt .
-RUN python -m uv install -r requirements.txt
+RUN python -m pip install --upgrade -r requirements.txt

@@ -107,7 +107,7 @@ def main():
 
     print("Initialising the output HDF file")
     outName = Path(args.input_dir).name
-    outFile = h5py.File(Path(args.output_dir) / f"{outName}.h5", "w")
+    outFile = h5py.File(Path(args.output_dir) / f"{outName}1.h5", "w")
     outFile.create_group("even")
     outFile.create_group("odd")
 
@@ -135,7 +135,7 @@ def main():
         print(" -- loading MC info")
         mc_vars = [k for k in tree.keys() if "Ttbar_MC" in k]  # noqa
         mc_vars = [k for k in mc_vars if "FSR" not in k]
-
+        mc_vars = [k for k in mc_vars if "_W_" not in k]  # Dont need W's as we have their products
         mc_info = ak.to_numpy(tree.arrays(mc_vars))
 
         # Bjet weights being negative is a bug, abs them
@@ -173,8 +173,10 @@ def main():
             "Ttbar_MC_Wdecay2_from_tbar_phi",
             "Ttbar_MC_Wdecay2_from_tbar_pdgId",
         ]
-        nu_1 = stu(ak.to_numpy(tree.arrays(nu_1_vars))).astype(np.float32)
-        nu_2 = stu(ak.to_numpy(tree.arrays(nu_2_vars))).astype(np.float32)
+
+        # This information should already be in the MC info
+        nu_1 = stu(mc_info[nu_1_vars]).astype(np.float32)
+        nu_2 = stu(mc_info[nu_2_vars]).astype(np.float32)
         neutrinos = np.dstack([nu_1, nu_2]).transpose((0, 2, 1))
         inFile.close()
 
