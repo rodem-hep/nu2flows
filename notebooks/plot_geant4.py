@@ -2,9 +2,7 @@
 
 import rootutils
 
-root = rootutils.setup_root(
-    search_from="/home/users/l/leighm/nu2flows", pythonpath=True
-)
+root = rootutils.setup_root(search_from="/home/users/l/leighm/nu2flows", pythonpath=True)
 
 from pathlib import Path
 
@@ -17,7 +15,7 @@ from src.datamodules.physics import Mom4Vec
 from src.utils import read_geant4_file
 
 # Paths to the relevant files
-data_file = "/srv/beegfs/scratch/groups/dpnc/atlas/ttbar_vflows/data/nonvirtual_mc16d_spincorr.h5"  # noqa
+data_file = "/srv/beegfs/scratch/groups/dpnc/atlas/ttbar_vflows/data/nonvirtual_mc16d_spincorr.h5"
 model_file = "/home/users/l/leighm/scratch/Saved_Networks/nu2flows_geant4/trained_on_atlas_even/outputs/nonvirtual_mc16d_spincorr.h5"  # noqa
 
 # Define the variables to plot
