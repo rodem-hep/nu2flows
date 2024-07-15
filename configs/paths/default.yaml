@@ -1,5 +1,5 @@
 # output dir will be created by hydra
-data_dir: /srv/beegfs/scratch/groups/rodem/ttbar_evt_reco/data_share/20220809_ttbar_dilep/
+data_dir: /srv/beegfs/scratch/groups/dpnc/atlas/ttbar_vflows/data/rel24_240209/hdf5/
 output_dir: /home/users/l/leighm/scratch/Saved_Networks/
 
 # Interpolated

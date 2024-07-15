@@ -1,4 +1,5 @@
 from functools import partial
+from pathlib import Path
 from typing import Any
 
 import torch as T
@@ -10,6 +11,7 @@ from mltools.mltools.flows import rqs_flow
 from mltools.mltools.lightning_utils import simple_optim_sched
 from mltools.mltools.mlp import MLP
 from mltools.mltools.modules import IterativeNormLayer
+from mltools.mltools.plotting import plot_multi_hists
 from mltools.mltools.transformers import TransformerVectorEncoder
 
 
@@ -26,6 +28,7 @@ class NuFlows(LightningModule):
         flow_config: dict,
         scheduler: partial,
         optimizer: partial,
+        gen_validation: int = 0,
     ) -> None:
         """Parameters
         ----------
@@ -43,15 +46,21 @@ class NuFlows(LightningModule):
             Configuration dictionary for the learning rate scheduler
         optimizer : partial
             Partially initialised optimizer for the model
+        gen_validation : int
+            The number of validation batches to generate samples for.
+            By default, no samples are generated.
         """
         super().__init__()
         self.save_hyperparameters(logger=False)
         self.input_dimensions = input_dimensions
         self.target_dimensions = target_dimensions
+        self.gen_validation = gen_validation
+        self.valid_outs = []
+        self.valid_targets = []
 
         # Initialise the transformer vector encoder
         self.transformer = TransformerVectorEncoder(**transformer_config)
-        dim = self.transformer.dim
+        dim = self.transformer.inpt_dim
 
         # Record the input dimensions and initialise an embedding network for each
         for key, inpt_dim in input_dimensions.items():
@@ -104,8 +113,8 @@ class NuFlows(LightningModule):
             all_mask.append(mask)
 
         # Concatenate all the embeddings together
-        embeddings = T.cat(embeddings, dim=1)
-        all_mask = T.cat(all_mask, dim=1)
+        embeddings = T.hstack(embeddings).nan_to_num()
+        all_mask = T.hstack(all_mask)
 
         # Pass the combined tensor through the transformer and return
         return self.transformer(embeddings, mask=all_mask)
@@ -122,17 +131,10 @@ class NuFlows(LightningModule):
             outputs = outputs[..., dim:]
         return output_dict
 
-    def on_fit_start(self, *_args) -> None:
-        """Function to run at the start of training."""
-        # Define the metrics for wandb (otherwise the min wont be stored!)
-        if wandb.run is not None:
-            wandb.define_metric("train/total_loss", summary="min")
-            wandb.define_metric("valid/total_loss", summary="min")
-
-    def _shared_step(self, sample: tuple) -> T.Tensor:
+    def _shared_step(self, sample: tuple, flag: str) -> T.Tensor:
         """Shared step for training and validation."""
         # Unpack the sample
-        inputs, targets = sample
+        inputs, targets, weight = sample
 
         # Get the context and the flattened targets
         ctxt = self.get_context(inputs)
@@ -140,26 +142,33 @@ class NuFlows(LightningModule):
 
         # Pass through the flow and get the log likelihood loss
         with autocast(device_type="cuda", enabled=False):
-            return self.flow.forward_kld(targ, context=ctxt)
+            log_prob = self.flow.log_prob(targ, context=ctxt).nan_to_num()
+            loss = -(log_prob * weight).mean()
 
-    @autocast(device_type="cuda", enabled=False)
-    def sample(self, inputs: dict, samples_per_event: int = 1) -> dict:
+        # Log the loss and return
+        self.log(f"{flag}/total_loss", loss)
+        return loss
+
+    @T.no_grad()
+    def sample(self, inputs: dict) -> dict:
         """Generate many points per sample."""
         # Get the context from the event feature extractor
         ctxt = self.get_context(inputs)
 
         # Repeat the context for how many samples per event
-        ctxt = ctxt.repeat_interleave(samples_per_event, dim=0)
+        # Commenting out the behaviour for multiple samples per event
+        # ctxt = ctxt.repeat_interleave(samples_per_event, dim=0)
 
         # Sample from the flow, undo normalisation and reshape
         sampled, log_probs = self.flow.sample(ctxt.shape[0], ctxt)
         sampled = self.target_norm.reverse(sampled)
-        sampled = sampled.view(-1, samples_per_event, sampled.shape[-1])
-        log_probs = log_probs.view(-1, samples_per_event)
+        # sampled = sampled.view(-1, samples_per_event, sampled.shape[-1])
+        # log_probs = log_probs.view(-1, samples_per_event)
 
         # Pack the targets into a dict and return
         out_dict = self.pack_outputs(sampled)
         out_dict["log_probs"] = log_probs
+
         return out_dict
 
     def forward(self, *args) -> Any:
@@ -169,10 +178,13 @@ class NuFlows(LightningModule):
         return tuple(sample_dict.values())
 
     def training_step(self, batch: tuple, _batch_idx: int) -> T.Tensor:
-        return self._shared_step(batch)
+        return self._shared_step(batch, "train")
 
     def validation_step(self, batch: tuple, batch_idx: int) -> T.Tensor:
-        return self._shared_step(batch)
+        if batch_idx < self.gen_validation:
+            self.valid_outs.append(self.sample(batch[0]))
+            self.valid_targets.append(batch[1])
+        return self._shared_step(batch, "valid")
 
     def predict_step(self, batch: tuple, _batch_idx: int) -> dict:
         """Single prediction step which add generates samples."""
@@ -180,3 +192,22 @@ class NuFlows(LightningModule):
 
     def configure_optimizers(self) -> dict:
         return simple_optim_sched(self)
+
+    def on_validation_epoch_end(self) -> None:
+        keys = self.target_dimensions.keys()
+        val_outs = {k: T.vstack([v[k] for v in self.valid_outs]).cpu().numpy() for k in keys}
+        val_targets = {k: T.vstack([v[k] for v in self.valid_targets]).cpu().numpy() for k in keys}
+
+        # Log the validation histograms
+        for k in keys:
+            Path("plots").mkdir(exist_ok=True)
+            img = plot_multi_hists(
+                data_list=[val_targets[k], val_outs[k]],
+                data_labels=["Target", "Output"],
+                col_labels=[f"{k}-{i}" for i in range(val_outs[k].shape[-1])],
+                bins=30,
+                return_img=True,
+                path="plots/valid_hist.png",
+            )
+            if wandb.run is not None:
+                wandb.log({f"valid/{k}": [wandb.Image(img)]})

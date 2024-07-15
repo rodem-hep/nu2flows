@@ -17,9 +17,7 @@ from mltools.mltools.torch_utils import to_np
 log = logging.getLogger(__name__)
 
 
-@hydra.main(
-    version_base=None, config_path=str(root / "configs"), config_name="export.yaml"
-)
+@hydra.main(version_base=None, config_path=str(root / "configs"), config_name="export.yaml")
 def main(cfg: DictConfig) -> None:
     log.info("Loading run information")
     orig_cfg = reload_original_config(ckpt_flag="*best*")
@@ -35,7 +33,7 @@ def main(cfg: DictConfig) -> None:
     # Cycle through the datasets and create the dataloader
     for dataset in cfg.datasets:
         log.info(f"Instantiating the data module for {dataset}")
-        orig_cfg.datamodule.test_conf.file_list = [dataset]
+        orig_cfg.datamodule.test_conf.file_name = dataset
         datamodule = hydra.utils.instantiate(orig_cfg.datamodule)
 
         log.info("Instantiating the trainer")
@@ -52,7 +50,7 @@ def main(cfg: DictConfig) -> None:
 
         log.info("Saving Outputs")
         Path("outputs").mkdir(exist_ok=True, parents=True)
-        with h5py.File(f"outputs/{dataset}", mode="w") as file:
+        with h5py.File(f"outputs/{dataset.split('/')[-1]}", "w") as file:
             for key in keys:
                 file.create_dataset(key, data=to_np(comb_dict[key]))
 

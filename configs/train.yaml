@@ -12,13 +12,20 @@ defaults:
   - callbacks: default.yaml
   - experiment: null
 
-seed: 12345 # For reproducibility
-project_name: models # Determines output directory path and wandb project
-network_name: example # Used for both saving and wandb
-ckpt_path: null # Checkpoint path to resume training
-precision: medium # Can set to medium to improve speed on ampere GPUs
+# Basic training configuration
+seed: 42 # For reproducibility
+project_name: nu2flows # Determines output directory path and wandb project
+network_name: test # Used for both saving and wandb
+ckpt_path: null  # Checkpoint path to resume training
+weight_ckpt_path: null # Checkpoint path to load weights (but not optimizers etc)
+tags: null # Extra tags passed to the logger
+
+# Extra tweaks available with the new pytorch version
+precision: medium # Should use medium if on ampere gpus
+compile: null # Can set to default for faster compiles
 
 # COMPLETELY replaces the above config with what is contained in ${paths.full_path}
 # This is ideal for resuming a job, log to the same directory
 # Will also resume the loggers and set the ckpt_path to the latest
 full_resume: False
+ckpt_flag: last.ckpt # Name of the checkpoint file, can use wildcards

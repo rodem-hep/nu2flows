@@ -20,7 +20,7 @@ packages = ["nu2flows"]
 dependencies = {file = ["requirements.txt"]}
 
 [tool.ruff]
-line-length = 88
+line-length = 100
 preview = true
 target-version = "py311"
 lint.select = ["ALL", "D212", "D417"]

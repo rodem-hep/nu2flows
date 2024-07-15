@@ -1,0 +1,20 @@
+_target_: src.datamodules.geant4.Geant4H5DataModule
+
+train_conf:
+  file_name: user.mleigh.410472.PhPy8EG.DAOD_PHYS.e6348_s3681_r13167_p5855.241007-v0_nuflowsout.h5
+  file_dir: ${paths.data_dir}
+  group_name: even
+  num_events: null
+
+test_conf:
+  file_name: ${..train_conf.file_name}
+  file_dir: ${..train_conf.file_dir}
+  group_name: odd
+  num_events: null
+
+loader_conf:
+  pin_memory: True
+  batch_size: 2000
+  num_workers: 2
+
+val_frac: 0.1

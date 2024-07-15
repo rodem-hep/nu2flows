@@ -4,6 +4,7 @@ from __future__ import annotations  # Needed for type hinting itself
 
 import numpy as np
 import torch as T
+
 from mltools.mltools.torch_utils import empty_0dim_like
 
 
@@ -48,8 +49,7 @@ class Mom4Vec:
             self.is_tensor = False
         else:
             raise TypeError(
-                "Mom4Vec is not able to tell if data is a torch tensor "
-                "or a numpy array!"
+                "Mom4Vec is not able to tell if data is a torch tensor " "or a numpy array!"
             )
 
         # Create the 4 momentum array/tensor
@@ -110,9 +110,7 @@ class Mom4Vec:
     def eta(self) -> np.ndarray | T.Tensor:
         """Return the pseudorapitity."""
         if self.is_cartesian:
-            return np.arctanh(
-                np.clip((self.pz / (self.p3_mag + 1e-8)), 1e-6 - 1, 1 - 1e-6)
-            )
+            return np.arctanh(np.clip((self.pz / (self.p3_mag + 1e-8)), 1e-6 - 1, 1 - 1e-6))
         return self.mom[..., 1:2]
 
     @property
@@ -172,9 +170,7 @@ class Mom4Vec:
     def mass(self) -> np.ndarray | T.Tensor:
         """Return the mass using the m2=E2-p2."""
         if self.is_cartesian:
-            return np.sqrt(
-                np.abs(self.energy**2 - (self.px**2 + self.py**2 + self.pz**2))
-            )
+            return np.sqrt(np.abs(self.energy**2 - (self.px**2 + self.py**2 + self.pz**2)))
         return np.sqrt(np.abs(self.energy**2 - (self.pt * np.cosh(self.eta)) ** 2))
 
     @property
