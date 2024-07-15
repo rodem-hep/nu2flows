@@ -78,9 +78,7 @@ class H5Dataset(Dataset):
             with h5py.File(file, "r") as f:
                 table = f[table_name]
                 self.misc.append(
-                    np.vstack([table["njets"][:npf], table["nbjets"][:npf]]).T.astype(
-                        "float"
-                    )
+                    np.vstack([table["njets"][:npf], table["nbjets"][:npf]]).T.astype("float")
                 )
                 self.misc_vars = ["njets", "nbjets"]
                 self.met.append(stu(table["MET"][:npf]))
@@ -112,18 +110,10 @@ class H5Dataset(Dataset):
 
         # convert to specified coordinates
         log.info("converting data to specified coordinates...")
-        self.met, self.met_vars = change_from_ptetaphiE(
-            self.met, self.met_vars, self.met_kins
-        )
-        self.lep, self.lep_vars = change_from_ptetaphiE(
-            self.lep, self.lep_vars, self.lep_kins
-        )
-        self.jet, self.jet_vars = change_from_ptetaphiE(
-            self.jet, self.jet_vars, self.jet_kins
-        )
-        self.nu, self.nu_vars = change_from_ptetaphiE(
-            self.nu, self.nu_vars, self.nu_kins, n_dim=3
-        )
+        self.met, self.met_vars = change_from_ptetaphiE(self.met, self.met_vars, self.met_kins)
+        self.lep, self.lep_vars = change_from_ptetaphiE(self.lep, self.lep_vars, self.lep_kins)
+        self.jet, self.jet_vars = change_from_ptetaphiE(self.jet, self.jet_vars, self.jet_kins)
+        self.nu, self.nu_vars = change_from_ptetaphiE(self.nu, self.nu_vars, self.nu_kins, n_dim=3)
 
     def __len__(self) -> int:
         return len(self.met)
@@ -188,9 +178,7 @@ class H5DataModule(LightningDataModule):
         if stage in {"fit", "validate"}:
             self.dataset = H5Dataset(**self.hparams.train_conf)
             # self.dataset.plot_variables("plots")
-            self.train_set, self.valid_set = train_valid_split(
-                self.dataset, self.hparams.val_frac
-            )
+            self.train_set, self.valid_set = train_valid_split(self.dataset, self.hparams.val_frac)
             self.n_train_samples = len(self.train_set)
             self.n_valid_samples = len(self.valid_set)
 
