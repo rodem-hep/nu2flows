@@ -2,16 +2,17 @@ from functools import partial
 from pathlib import Path
 from typing import Any
 
+import numpy as np
 import torch as T
 import wandb
 from lightning import LightningModule
-from torch import autocast
 
 from mltools.mltools.flows import rqs_flow
 from mltools.mltools.lightning_utils import simple_optim_sched
 from mltools.mltools.mlp import MLP
 from mltools.mltools.modules import IterativeNormLayer
-from mltools.mltools.plotting import plot_multi_hists
+from mltools.mltools.plotting import plot_corr_heatmaps, plot_multi_hists, quantile_bins
+from mltools.mltools.torch_utils import to_np
 from mltools.mltools.transformers import TransformerVectorEncoder
 
 
@@ -72,7 +73,7 @@ class NuFlows(LightningModule):
         self.target_norm = IterativeNormLayer(target_dim)
 
         # Initialise the normalising flow
-        self.flow = rqs_flow(xz_dim=target_dim, ctxt_dim=dim, **flow_config)
+        self.flow = rqs_flow(xz_dim=target_dim, ctxt_dim=self.transformer.outp_dim, **flow_config)
 
     def get_context(self, inputs: dict) -> T.Tensor:
         """Pass the inputs through the transformer context extractor.
@@ -113,7 +114,7 @@ class NuFlows(LightningModule):
             all_mask.append(mask)
 
         # Concatenate all the embeddings together
-        embeddings = T.hstack(embeddings).nan_to_num()
+        embeddings = T.hstack(embeddings)
         all_mask = T.hstack(all_mask)
 
         # Pass the combined tensor through the transformer and return
@@ -131,19 +132,32 @@ class NuFlows(LightningModule):
             outputs = outputs[..., dim:]
         return output_dict
 
+    @T.cuda.amp.custom_fwd(cast_inputs=T.float32)
+    def _get_log_probs(
+        self,
+        targets: T.Tensor,
+        context: T.Tensor,
+        weights: T.Tensor | None = None,
+    ) -> T.Tensor:
+        """Seperate function to allow torch autocasing."""
+        log_prob = self.flow.log_prob(targets, context)
+        if weights is not None:
+            log_prob *= weights
+        # TODO: Why are NaNs appearing?
+        log_prob = T.nan_to_num(log_prob, nan=0.0, posinf=0.0, neginf=0.0)
+        return log_prob.mean()
+
     def _shared_step(self, sample: tuple, flag: str) -> T.Tensor:
         """Shared step for training and validation."""
         # Unpack the sample
-        inputs, targets, weight = sample
+        inputs, targets, _weights = sample
 
         # Get the context and the flattened targets
         ctxt = self.get_context(inputs)
         targ = self.get_targets(targets)
 
         # Pass through the flow and get the log likelihood loss
-        with autocast(device_type="cuda", enabled=False):
-            log_prob = self.flow.log_prob(targ, context=ctxt).nan_to_num()
-            loss = -(log_prob * weight).mean()
+        loss = -self._get_log_probs(targ, ctxt)  # TODO: Use weights
 
         # Log the loss and return
         self.log(f"{flag}/total_loss", loss)
@@ -182,8 +196,8 @@ class NuFlows(LightningModule):
 
     def validation_step(self, batch: tuple, batch_idx: int) -> T.Tensor:
         if batch_idx < self.gen_validation:
-            self.valid_outs.append(self.sample(batch[0]))
-            self.valid_targets.append(batch[1])
+            self.valid_outs.append(to_np(self.sample(batch[0])))
+            self.valid_targets.append(to_np(batch[1]))
         return self._shared_step(batch, "valid")
 
     def predict_step(self, batch: tuple, _batch_idx: int) -> dict:
@@ -195,8 +209,10 @@ class NuFlows(LightningModule):
 
     def on_validation_epoch_end(self) -> None:
         keys = self.target_dimensions.keys()
-        val_outs = {k: T.vstack([v[k] for v in self.valid_outs]).cpu().numpy() for k in keys}
-        val_targets = {k: T.vstack([v[k] for v in self.valid_targets]).cpu().numpy() for k in keys}
+        val_outs = {k: np.vstack([v[k] for v in self.valid_outs]) for k in keys}
+        val_targets = {k: np.vstack([v[k] for v in self.valid_targets]) for k in keys}
+        self.valid_outs.clear()
+        self.valid_targets.clear()
 
         # Log the validation histograms
         for k in keys:
@@ -207,7 +223,20 @@ class NuFlows(LightningModule):
                 col_labels=[f"{k}-{i}" for i in range(val_outs[k].shape[-1])],
                 bins=30,
                 return_img=True,
-                path="plots/valid_hist.png",
+                path=f"plots/hist_{k}.png",
             )
             if wandb.run is not None:
                 wandb.log({f"valid/{k}": [wandb.Image(img)]})
+
+            bins = quantile_bins(val_targets[k][:, 0], bins=100)
+            img = plot_corr_heatmaps(
+                val_outs[k][:, 0],
+                val_targets[k][:, 0],
+                bins=[bins, bins],
+                xlabel=f"Output: {k}0",
+                ylabel=f"Target: {k}0",
+                path=f"plots/corr_{k}.png",
+                return_img=True,
+            )
+            if wandb.run is not None:
+                wandb.log({f"valid/corr_{k}": [wandb.Image(img)]})

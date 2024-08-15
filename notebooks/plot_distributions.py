@@ -1,66 +1,56 @@
 import h5py
-import matplotlib.pyplot as plt
 import numpy as np
+import rootutils
+
+root = rootutils.setup_root(search_from=__file__, pythonpath=True)
+
+
+from mltools.mltools.plotting import plot_multi_hists
 
 file_dir = "/srv/beegfs/scratch/groups/dpnc/atlas/ttbar_vflows/data/rel24_240209/hdf5/"
-file_name = "user.mleigh.410472.PhPy8EG.DAOD_PHYS.e6348_s3681_r13167_p5855.241007-v0_nuflowsout.h5"
+file_name = "merged.h5"
 file_path = file_dir + file_name
 
+n_events = None
+group_name = "odd"
+
+data = {}
 with h5py.File(file_path, "r") as f:
-    jet = np.vstack([f["even"]["jet"][:], f["odd"]["jet"][:]])
-    lep = np.vstack([f["even"]["lep"][:], f["odd"]["lep"][:]])
-    met = np.vstack([f["even"]["met"][:], f["odd"]["met"][:]])
-    nu = np.vstack([f["even"]["neutrinos"][:], f["odd"]["neutrinos"][:]])
-    evt_info = np.concatenate([f["even"]["evt_info"][:], f["odd"]["evt_info"][:]], axis=0)
+    data["jet"] = f["even"]["jet"][:n_events]
+    data["lep"] = f["even"]["lep"][:n_events]
+    data["met"] = f["even"]["met"][:n_events]
+    data["nu"] = f["even"]["neutrinos"][:n_events]
+
+# Safety clips: make sure all kinematics are < 1 TeV
+# Kinematics are the first 3 columns of each array except met which is the first 2
+# Clip sumet to 5 TeV
+for k, v in data.items():
+    if k == "met":
+        data[k][..., :2] = np.clip(v[..., :2], -1e3, 1e3)
+        data[k][..., 2] = np.clip(v[..., 2], 0, 5e3)
+    else:
+        data[k][..., :3] = np.clip(v[..., :3], -1e3, 1e3)
 
 # Jets need to be padded so create a mask
-jet_mask = ~np.all(jet == 0, axis=-1)
+mask = data["jet"][..., 3] > 0.01
+data["jet"] = data["jet"][mask]
 
-# Get the weight of the event
-ws = [
-    "weight_mc_NOSYS",
-    "weight_pileup_NOSYS",
-    "weight_beamspot",
-    "weight_btagSF_DL1dv01_Continuous_NOSYS",
-]
+# Plot the distributions
+np.set_printoptions(formatter={"float": lambda x: f"{x:0.2e}"})
+for k, v in data.items():
+    print(f"Array: {k}")
+    print(f" - shape: {v.shape}")
+    print(f" - nans: {np.isnan(v).sum()}")
+    print(f" - infs: {np.isinf(v).sum()}")
+    print(f" - min: {np.min(v, axis=tuple(range(v.ndim - 1)))}")
+    print(f" - max: {np.max(v, axis=tuple(range(v.ndim - 1)))}")
 
-# Combine the weights by reducing the product
-weights = np.cumprod([evt_info[w] for w in ws], axis=0).astype(np.float32)
-weights = np.pad(weights, ((1, 0), (0, 0)), mode="constant", constant_values=1)
-
-
-def plot_ax(weights, value, bins, ax, label):
-    for i in range(len(weights)):
-        w = np.repeat(weights[i, None].T, value.shape[-1], axis=-1)
-        hist, bins = np.histogram(value, bins=bins, weights=w, density=True)
-        ax.stairs(hist, bins, label=i)
-        ax.set_xlabel(label)
-        ax.set_yscale("log")
-
-
-# Plot the raw distributions of the neutrinos
-fig, axes = plt.subplots(2, 2, figsize=(8, 8))
-
-# Neutrino Energy
-bins = np.linspace(0, 300, 50)
-nu_e = np.linalg.norm(nu, axis=-1) / 1000
-plot_ax(weights, nu_e, bins, axes[0, 0], "Neutrino Energy [GeV]")
-
-# Jet Energy
-bins = np.linspace(20, 1000, 50)
-jet_e = np.exp(jet[..., 3]) / 1000
-plot_ax(weights, jet_e, bins, axes[0, 1], "Jet Energy [GeV]")
-
-# Electron Energy
-bins = np.linspace(2, 500, 50)
-lep_e = np.exp(lep[..., 3]) / 1000
-plot_ax(weights, lep_e, bins, axes[1, 0], "Electron Energy [GeV]")
-
-# SumET
-bins = np.linspace(2, 1500, 50)
-sumet = met[..., 2] / 1000
-plot_ax(weights, sumet, bins, axes[1, 1], "SumET [GeV]")
-axes[1, 1].legend()
-
-fig.savefig("nu_energy.png")
-plt.close()
+    flat_v = v.reshape(v.shape[0], -1)
+    plot_multi_hists(
+        data_list=flat_v,
+        data_labels=k,
+        col_labels=list(range(flat_v.shape[-1])),
+        path=f"plots/{k}_distributions2.png",
+        bins=51,
+        logy=True,
+    )

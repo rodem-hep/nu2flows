@@ -5,7 +5,7 @@ root = rootutils.setup_root(search_from=__file__, pythonpath=True)
 from mltools.mltools.utils import standard_job_array
 
 data_dir = "/srv/beegfs/scratch/groups/dpnc/atlas/ttbar_vflows/data/rel24_240209/"
-f = "user.mleigh.410472.PhPy8EG.DAOD_PHYS.e6348_s3681_r13167_p5855.241007-v0_nuflowsout"
+f = "user.mleigh.410472.PhPy8EG.DAOD_PHYS.*.17-07-24-v0_nuflowsout/"
 opt_dict = {
     "input_dir": data_dir + "root/" + f,
     "output_dir": data_dir + "hdf5/",

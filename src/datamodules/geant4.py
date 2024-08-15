@@ -38,6 +38,7 @@ class Geant4H5Dataset(Dataset):
         super().__init__()
 
         file_path = Path(file_dir, file_name)
+        log.info(f"loading file: {file_path}")
         with h5py.File(file_path, "r") as f:
             self.jet = f[group_name]["jet"][:num_events]
             self.lep = f[group_name]["lep"][:num_events]
@@ -47,8 +48,17 @@ class Geant4H5Dataset(Dataset):
             self.evt_info = f[group_name]["evt_info"][:num_events]
         log.info(f"{len(self.met)} events loaded")
 
-        # Jets need to be padded so create a mask
-        self.jet_mask = ~np.all(self.jet == 0, axis=-1)
+        # Safety clips: make sure all kinematics are < 1 TeV
+        # Kinematics are the first 3 columns of each array
+        # Except met which is the first 2, then clip sumet to 5 TeV
+        self.jet[..., :3] = np.clip(self.jet[..., :3], -1e3, 1e3)
+        self.lep[..., :3] = np.clip(self.lep[..., :3], -1e3, 1e3)
+        self.nu[..., :3] = np.clip(self.nu[..., :3], -1e3, 1e3)
+        self.met[..., :2] = np.clip(self.met[..., :2], -1e3, 1e3)
+        self.met[..., 2] = np.clip(self.met[..., 2], 0, 5e3)
+
+        # Jets need to be padded so create a mask (px, py, pz, E, M, b-tag)
+        self.jet_mask = self.jet[..., 3] > 0
 
         # Get the weight of the event
         ws = [
@@ -57,8 +67,6 @@ class Geant4H5Dataset(Dataset):
             "weight_beamspot",
             "weight_btagSF_DL1dv01_Continuous_NOSYS",
         ]
-
-        # Combine the weights by reducing the product
         self.weight = np.prod([self.evt_info[w] for w in ws], axis=0).astype(np.float32)
         self.weight /= np.mean(self.weight)  # Ensure average weight is 1
 

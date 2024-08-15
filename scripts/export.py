@@ -27,32 +27,34 @@ def main(cfg: DictConfig) -> None:
     model_class = hydra.utils.get_class(orig_cfg.model._target_)
     model = model_class.load_from_checkpoint(orig_cfg.ckpt_path, map_location=device)
 
-    # Use the export batch size
+    # Switch settings for the export
     orig_cfg.datamodule.loader_conf.batch_size = cfg.batch_size
 
-    # Cycle through the datasets and create the dataloader
-    for dataset in cfg.datasets:
-        log.info(f"Instantiating the data module for {dataset}")
-        orig_cfg.datamodule.test_conf.file_name = dataset
-        datamodule = hydra.utils.instantiate(orig_cfg.datamodule)
+    # Load the test datasets and run the predictions
+    datamodule = hydra.utils.instantiate(orig_cfg.datamodule)
 
-        log.info("Instantiating the trainer")
-        orig_cfg.trainer["enable_progress_bar"] = True
-        orig_cfg.trainer["logger"] = False  # Prevents a lightning_logs folder
-        trainer = hydra.utils.instantiate(orig_cfg.trainer)
+    log.info("Instantiating the trainer")
+    orig_cfg.trainer["enable_progress_bar"] = True
+    orig_cfg.trainer["logger"] = False  # Prevents a lightning_logs folder
+    trainer = hydra.utils.instantiate(orig_cfg.trainer)
 
-        log.info("Running the prediction loop")
-        outputs = trainer.predict(model=model, datamodule=datamodule)
+    log.info("Running the prediction loop")
+    outputs = trainer.predict(model=model, datamodule=datamodule)
 
-        log.info("Combining predictions across dataset")
-        keys = list(outputs[0].keys())
-        comb_dict = {key: T.vstack([o[key] for o in outputs]) for key in keys}
+    log.info("Combining predictions across dataset")
+    keys = list(outputs[0].keys())
+    comb_dict = {}
+    for k in keys:
+        outs = [o[k] for o in outputs]
+        if outs[0].ndim == 1:
+            outs = [o.unsqueeze(1) for o in outs]
+        comb_dict[k] = T.vstack(outs)
 
-        log.info("Saving Outputs")
-        Path("outputs").mkdir(exist_ok=True, parents=True)
-        with h5py.File(f"outputs/{dataset.split('/')[-1]}", "w") as file:
-            for key in keys:
-                file.create_dataset(key, data=to_np(comb_dict[key]))
+    log.info("Saving Outputs")
+    Path("outputs").mkdir(exist_ok=True, parents=True)
+    with h5py.File("outputs/test.h5", "w") as file:
+        for key, v in comb_dict.items():
+            file.create_dataset(key, data=to_np(v))
 
 
 if __name__ == "__main__":

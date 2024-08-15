@@ -4,9 +4,6 @@ defaults:
   - hydra: default.yaml
   - _self_
 
-datasets:
- - ${paths.data_dir}/output_odd.h5
-
 # The name of the model to export
 project_name: nu2flows_geant4
 network_name: trained_on_even

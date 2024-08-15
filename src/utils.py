@@ -14,39 +14,35 @@ from dotmap import DotMap
 from src.datamodules.physics import Mom4Vec, delR
 
 
-def read_geant4_file(file_path: Path, table_name: str) -> DotMap:
+def read_geant4_file(file_path: Path, group_name: str, num_events: int | None = None) -> DotMap:
     """Reads in an hdf5 file from the geant4 dataset."""
-    # Read the delphes table as a dotmap object
-    file_data = DotMap()
     with h5py.File(file_path, "r") as f:
-        table = f[table_name]
-        for key in table:
-            file_data[key] = table[key][:]
+        jet = f[group_name]["jet"][:num_events]
+        lep = f[group_name]["lep"][:num_events]
+        met = f[group_name]["met"][:num_events]
+        misc = f[group_name]["misc"][:num_events]
+        nu = f[group_name]["neutrinos"][:num_events]
+        evt_info = f[group_name]["evt_info"][:num_events]
 
-    # Remove all bad neutrinos
-    nu = file_data["neutrinos"]
-    mask = ~np.isinf(nu).any(axis=(-1, -2))
-    mask = mask & (nu < 5e5).any(axis=(-1, -2))
+    # Safety clips: make sure all kinematics are < 1 TeV
+    # Kinematics are the first 3 columns of each array
+    # Except met which is the first 2, then clip sumet to 5 TeV
+    jet[..., :3] = np.clip(jet[..., :3], -1e3, 1e3)
+    lep[..., :3] = np.clip(lep[..., :3], -1e3, 1e3)
+    nu[..., :3] = np.clip(nu[..., :3], -1e3, 1e3)
+    met[..., :2] = np.clip(met[..., :2], -1e3, 1e3)
+    met[..., 2] = np.clip(met[..., 2], 0, 5e3)
 
-    # Apply the mask to all entries
-    for key in file_data:
-        file_data[key] = file_data[key][mask]
-
-    # Neutrinos are the particles in MeV
-    file_data["neutrinos"] /= 1000
-
-    # Merge the met_x and met_y columns into a single column
-    file_data["MET"] = np.hstack([
-        file_data["met_x"][..., None],
-        file_data["met_y"][..., None],
-    ])
+    # Undo the logsquash preprocessing to get the raw kinematics
+    jet[..., 3:5] = np.exp(jet[..., 3:5]) - 1  # (px, py, pz, E, M, b-tag)
+    lep[..., 3] = np.exp(lep[..., 3]) - 1  # (px, py, pz, E, charge, flavour)
 
     # Change the particle entries to 4 vector objects
-    for key in ["MET", "neutrinos", "leptons", "jets"]:
-        if key in list(file_data.keys()):
-            file_data[key] = Mom4Vec(file_data[key])
+    jet = Mom4Vec(jet)
+    lep = Mom4Vec(lep)
+    nu = Mom4Vec(nu)
 
-    return file_data
+    return DotMap(jet=jet, lep=lep, met=met, misc=misc, nu=nu, evt_info=evt_info)
 
 
 def read_dilepton_file(file_path: Path, require_tops: bool = False) -> DotMap:

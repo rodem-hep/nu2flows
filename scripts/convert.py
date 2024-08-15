@@ -1,4 +1,5 @@
 import argparse
+from glob import glob
 from pathlib import Path
 
 import awkward as ak
@@ -97,6 +98,12 @@ def parse_args():
         type=str,
         help="directory for the output HDF5 file",
     )
+    args.add_argument(
+        "--output_name",
+        type=str,
+        help="name of the merged filr",
+        default="combined.h5",
+    )
     args.add_argument("--tree", type=str, help="input tree name", default="reco")
     args.add_argument("--chunksize", type=int, help="chunksize for the output file", default=4000)
     return args.parse_args()
@@ -105,121 +112,157 @@ def parse_args():
 def main():
     args = parse_args()
 
+    print("Loading checkpoint")
+    checkName = Path(args.output_dir, args.output_name).with_suffix(".txt")
+    try:
+        checkFiles = np.loadtxt(checkName, dtype=str)
+        checkFiles = checkFiles.tolist()
+        readMode = "a"
+    except FileNotFoundError:
+        checkFiles = []
+        readMode = "w"
+
     print("Initialising the output HDF file")
-    outName = Path(args.input_dir).name
-    outFile = h5py.File(Path(args.output_dir) / f"{outName}1.h5", "w")
+    outName = Path(args.output_dir, args.output_name)
+    outFile = h5py.File(outName, readMode)
     outFile.create_group("even")
     outFile.create_group("odd")
 
     print("Getting the list of input files")
-    files = sorted(Path(args.input_dir).glob("*.root"))
+    files = sorted(glob(str(Path(args.input_dir) / "*.root")))  # noqa
+    files = [Path(f) for f in files]
     print(f"Found {len(files)} files")
 
     for i, file in enumerate(files):
         print(f" -> Processing {file.name} ({i + 1}/{len(files)})")
-        inFile = ur.open(file)
-        tree = inFile[args.tree]
 
-        print(" -- getting the event info")
-        evt_vars = [
-            "eventNumber",
-            "weight_pileup_NOSYS",
-            "weight_beamspot",
-            "weight_jvt_effSF_NOSYS",
-            "weight_mc_NOSYS",
-            "weight_btagSF_DL1dv01_Continuous_NOSYS",
-            "weight_leptonSF_tight_NOSYS",
-        ]
-        evt_info = ak.to_numpy(tree.arrays(evt_vars))
+        # Skip files that have already been processed
+        if str(file) in checkFiles:
+            print(" -- already processed, skipping")
+            continue
 
-        print(" -- loading MC info")
-        mc_vars = [k for k in tree.keys() if "Ttbar_MC" in k]  # noqa
-        mc_vars = [k for k in mc_vars if "FSR" not in k]
-        mc_vars = [k for k in mc_vars if "_W_" not in k]  # Dont need W's as we have their products
-        mc_info = ak.to_numpy(tree.arrays(mc_vars))
+        # Whole thing in a try block to catch any errors
+        try:
+            inFile = ur.open(file)
+            tree = inFile[args.tree]
+            print(f" -- number of events: {tree.num_entries}")
 
-        # Bjet weights being negative is a bug, abs them
-        # This is a workaround until the source data is corrected
-        evt_info["weight_btagSF_DL1dv01_Continuous_NOSYS"] = np.abs(
-            evt_info["weight_btagSF_DL1dv01_Continuous_NOSYS"]
-        )
+            print(" -- getting the event info")
+            evt_vars = [
+                "eventNumber",
+                "weight_pileup_NOSYS",
+                "weight_beamspot",
+                "weight_jvt_effSF_NOSYS",
+                "weight_mc_NOSYS",
+                "weight_btagSF_DL1dv01_Continuous_NOSYS",
+                "weight_leptonSF_tight_NOSYS",
+            ]
+            evt_info = ak.to_numpy(tree.arrays(evt_vars))
 
-        print(" -- converting misc")
-        misc = tree["nuflows_input_misc_NOSYS"].array()
-        misc = awkward3D_to_padded(misc).astype(np.float32)
+            print(" -- loading MC info")
+            mc_vars = [k for k in tree.keys() if "Ttbar_MC" in k]  # noqa
+            mc_vars = [k for k in mc_vars if "FSR" not in k]
+            mc_vars = [
+                k for k in mc_vars if "_W_" not in k
+            ]  # Dont need W's as we have their products
+            mc_info = ak.to_numpy(tree.arrays(mc_vars))
 
-        print(" -- converting MET")
-        met = tree["nuflows_input_met_NOSYS"].array()
-        met = awkward3D_to_padded(met).astype(np.float32)
+            # Bjet weights being negative is a bug, abs them
+            # This is a workaround until the source data is corrected
+            evt_info["weight_btagSF_DL1dv01_Continuous_NOSYS"] = np.abs(
+                evt_info["weight_btagSF_DL1dv01_Continuous_NOSYS"]
+            )
 
-        print(" -- converting leptons")
-        lep = tree["nuflows_input_lep_NOSYS"].array()
-        lep = awkward3D_to_padded(lep, 2).astype(np.float32)
+            print(" -- converting misc")
+            misc = tree["nuflows_input_misc_NOSYS"].array()
+            misc = awkward3D_to_padded(misc).astype(np.float32)
 
-        print(" -- converting jets")
-        jet = tree["nuflows_input_jet_NOSYS"].array()
-        jet = awkward3D_to_padded(jet, 10).astype(np.float32)
+            print(" -- converting MET")
+            met = tree["nuflows_input_met_NOSYS"].array()
+            met = awkward3D_to_padded(met).astype(np.float32)
 
-        print(" -- converting neutrinos")
-        nu_1_vars = [
-            "Ttbar_MC_Wdecay1_from_t_pt",
-            "Ttbar_MC_Wdecay1_from_t_eta",
-            "Ttbar_MC_Wdecay1_from_t_phi",
-            "Ttbar_MC_Wdecay1_from_t_pdgId",
-        ]
-        nu_2_vars = [
-            "Ttbar_MC_Wdecay2_from_tbar_pt",
-            "Ttbar_MC_Wdecay2_from_tbar_eta",
-            "Ttbar_MC_Wdecay2_from_tbar_phi",
-            "Ttbar_MC_Wdecay2_from_tbar_pdgId",
-        ]
+            print(" -- converting leptons")
+            lep = tree["nuflows_input_lep_NOSYS"].array()
+            lep = awkward3D_to_padded(lep, 2).astype(np.float32)
 
-        # This information should already be in the MC info
-        nu_1 = stu(mc_info[nu_1_vars]).astype(np.float32)
-        nu_2 = stu(mc_info[nu_2_vars]).astype(np.float32)
-        neutrinos = np.dstack([nu_1, nu_2]).transpose((0, 2, 1))
-        inFile.close()
+            print(" -- converting jets")
+            jet = tree["nuflows_input_jet_NOSYS"].array()
+            jet = awkward3D_to_padded(jet, 10).astype(np.float32)
+            jet[..., 3] = np.clip(jet[..., 3], 0, None)  # Jet mass and energy are fucked
+            jet[..., 4] = np.clip(jet[..., 4], 0, None)
 
-        # Some event clearning has to be done
-        mask = ~np.any(neutrinos[..., -1] == 0, axis=-1)
-        mask &= ~np.any(neutrinos > 1e6, axis=(-1, -2))
+            print(" -- converting neutrinos")
+            nu_1_vars = [
+                "Ttbar_MC_Wdecay1_from_t_pt",
+                "Ttbar_MC_Wdecay1_from_t_eta",
+                "Ttbar_MC_Wdecay1_from_t_phi",
+            ]
+            nu_2_vars = [
+                "Ttbar_MC_Wdecay2_from_tbar_pt",
+                "Ttbar_MC_Wdecay2_from_tbar_eta",
+                "Ttbar_MC_Wdecay2_from_tbar_phi",
+            ]
 
-        # Apply the mask to all data, this also asserts that arrays are the same length
-        neutrinos = neutrinos[mask][..., :3]  # Get rid of the pdgId
-        misc = misc[mask]
-        met = met[mask]
-        lep = lep[mask]
-        jet = jet[mask]
-        evt_info = evt_info[mask]
-        mc_info = mc_info[mask]
+            # This information should already be in the MC info
+            nu_1 = stu(mc_info[nu_1_vars]).astype(np.float32)
+            nu_2 = stu(mc_info[nu_2_vars]).astype(np.float32)
+            neutrinos = np.dstack([nu_1, nu_2]).transpose((0, 2, 1))
+            inFile.close()
 
-        # Change the neutrino data to be px, py, pz
-        nu_pxpypz = np.zeros_like(neutrinos)
-        nu_pxpypz[..., 0] = neutrinos[..., 0] * np.cos(neutrinos[..., 2])
-        nu_pxpypz[..., 1] = neutrinos[..., 0] * np.sin(neutrinos[..., 2])
-        nu_pxpypz[..., 2] = neutrinos[..., 0] * np.sinh(neutrinos[..., 1])
+            # Change the neutrino data to be px, py, pz and switch to GeV
+            nu_pxpypz = np.zeros_like(neutrinos)
+            nu_pxpypz[..., 0] = neutrinos[..., 0] * np.cos(neutrinos[..., 2])
+            nu_pxpypz[..., 1] = neutrinos[..., 0] * np.sin(neutrinos[..., 2])
+            nu_pxpypz[..., 2] = neutrinos[..., 0] * np.sinh(neutrinos[..., 1])
+            nu_pxpypz /= 1000
 
-        if i == 0:
-            print(" -- initialising datasets")
+            # Some event cleaning has to be done
+            mask = ~np.any(nu_pxpypz[..., -1] == 0, axis=-1)
+            mask &= ~np.any(nu_pxpypz > 1e6, axis=(-1, -2))
+            mask &= ~np.any(np.isnan(nu_pxpypz), axis=(-1, -2))
+            mask &= ~np.any(np.isnan(misc), axis=(-1, -2))
+            mask &= ~np.any(np.isnan(met), axis=(-1, -2))
+            mask &= ~np.any(np.isnan(lep), axis=(-1, -2))
+            mask &= ~np.any(np.isnan(jet), axis=(-1, -2))
+
+            # Apply the mask to all data, this also asserts that arrays are the same length
+            nu_pxpypz = nu_pxpypz[mask]
+            misc = misc[mask]
+            met = met[mask]
+            lep = lep[mask]
+            jet = jet[mask]
+            evt_info = evt_info[mask]
+            mc_info = mc_info[mask]
+
+            if i == 0:
+                print(" -- initialising datasets")
+                for split in ["even", "odd"]:
+                    init_dataset(outFile, split, "neutrinos", nu_pxpypz)
+                    init_dataset(outFile, split, "misc", misc)
+                    init_dataset(outFile, split, "met", met)
+                    init_dataset(outFile, split, "lep", lep)
+                    init_dataset(outFile, split, "jet", jet)
+                    init_dataset(outFile, split, "evt_info", evt_info)
+                    init_dataset(outFile, split, "mc_info", mc_info)
+
+            print(" -- saving")
             for split in ["even", "odd"]:
-                init_dataset(outFile, split, "neutrinos", nu_pxpypz)
-                init_dataset(outFile, split, "misc", misc)
-                init_dataset(outFile, split, "met", met)
-                init_dataset(outFile, split, "lep", lep)
-                init_dataset(outFile, split, "jet", jet)
-                init_dataset(outFile, split, "evt_info", evt_info)
-                init_dataset(outFile, split, "mc_info", mc_info)
+                save = evt_info["eventNumber"] % 2 == (split == "odd")
+                extend_dataset(outFile, split, "neutrinos", nu_pxpypz[save])
+                extend_dataset(outFile, split, "misc", misc[save])
+                extend_dataset(outFile, split, "met", met[save])
+                extend_dataset(outFile, split, "lep", lep[save])
+                extend_dataset(outFile, split, "jet", jet[save])
+                extend_dataset(outFile, split, "evt_info", evt_info[save])
+                extend_dataset(outFile, split, "mc_info", mc_info[save])
 
-        print(" -- saving")
-        for split in ["even", "odd"]:
-            save = evt_info["eventNumber"] % 2 == (split == "odd")
-            extend_dataset(outFile, split, "neutrinos", nu_pxpypz[save])
-            extend_dataset(outFile, split, "misc", misc[save])
-            extend_dataset(outFile, split, "met", met[save])
-            extend_dataset(outFile, split, "lep", lep[save])
-            extend_dataset(outFile, split, "jet", jet[save])
-            extend_dataset(outFile, split, "evt_info", evt_info[save])
-            extend_dataset(outFile, split, "mc_info", mc_info[save])
+            # Save the file name to the checkpoint
+            checkFiles.append(str(file))
+            np.savetxt(checkName, checkFiles, fmt="%s", delimiter="\n")
+
+        except Exception as e:
+            print(f"Error processing {file.name}: {e}")
+
     outFile.close()
 
 

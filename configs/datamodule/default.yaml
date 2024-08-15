@@ -25,6 +25,5 @@ loader_conf:
   pin_memory: True
   batch_size: 4096
   num_workers: 6
-  shuffle: True
 
 val_frac: 0.1

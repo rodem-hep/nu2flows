@@ -1,13 +1,14 @@
 _target_: lightning.Trainer
 
 min_epochs: 1
-max_epochs: 1000
+max_epochs: 20
 enable_progress_bar: True
 accelerator: auto
 devices: 1
 precision: 32
 check_val_every_n_epoch: 1
 gradient_clip_val: 1
+num_sanity_val_steps: 0 # Turn this off as it fucks with the iterative norm layers
 
 # Interpolated
 default_root_dir: ${paths.output_dir}

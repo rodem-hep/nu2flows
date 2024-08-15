@@ -5,7 +5,6 @@ gen_validation: 10
 embed_config:
   hddn_dim: 256
   num_blocks: 1
-  act_o: SiLU
   act_h: SiLU
 
 transformer_config:
@@ -15,24 +14,26 @@ transformer_config:
   encoder_config:
     dim: 128
     num_layers: 4
-    num_registers: 4
+    num_registers: 2
     layer_config:
       dropout: 0.1
       num_heads: 8
   classattention_config:
     dim: 128
     num_layers: 2
+    do_final_norm: True
     layer_config:
-      num_heads: 8
+      num_heads: 2
+      layerscale_init: null # Don't layerscale a cross attention block!
 
 flow_config:
-  num_stacks: 8
-  mlp_width: 128
-  mlp_depth: 1
+  num_stacks: 10
+  mlp_width: 64
+  mlp_depth: 2
   mlp_act: SiLU
-  tail_bound: 4.0
+  tail_bound: 5.0
   dropout: 0.1
-  num_bins: 8
+  num_bins: 10
   flow_type: coupling
   do_lu: False
   init_identity: True
@@ -40,11 +41,13 @@ flow_config:
 optimizer:
   _target_: torch.optim.AdamW
   _partial_: true
-  lr: 1.0e-3
-  weight_decay: 1.0e-4
+  lr: 5.0e-4
+  weight_decay: 1.0e-5
 
 scheduler:
   _target_: mltools.mltools.lightning_utils.linear_warmup_cosine_decay
   _partial_: true
-  warmup_steps: 10_000
   total_steps: null # Replaced by trainer max_steps for a one cycle
+  warmup_steps: 2000
+  init_factor: 1.0e-5
+  final_factor: 1.0e-5

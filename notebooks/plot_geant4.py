@@ -15,8 +15,12 @@ from src.datamodules.physics import Mom4Vec
 from src.utils import read_geant4_file
 
 # Paths to the relevant files
-data_file = "/srv/beegfs/scratch/groups/dpnc/atlas/ttbar_vflows/data/nonvirtual_mc16d_spincorr.h5"
-model_file = "/home/users/l/leighm/scratch/Saved_Networks/nu2flows_geant4/trained_on_atlas_even/outputs/nonvirtual_mc16d_spincorr.h5"  # noqa
+num_events = 1000_000
+data_file = "/srv/beegfs/scratch/groups/dpnc/atlas/ttbar_vflows/data/rel24_240209/hdf5/merged.h5"
+model_file = "/srv/beegfs/scratch/users/l/leighm/Saved_Networks/nu2flows_geant4/trained_on_even/outputs/test.h5"  # noqa
+
+# Load the event data from the file
+file_data = read_geant4_file(Path(data_file), "odd", num_events)
 
 # Define the variables to plot
 nuflow = DotMap({
@@ -31,16 +35,14 @@ nutruth = DotMap({
     "err_kwargs": {"color": "grey", "hatch": "///"},
 })
 
-
-# Load the event data from the file
-file_data = read_geant4_file(Path(data_file), "atlas_odd")
-nutruth.nu = Mom4Vec(file_data.neutrinos.mom[:, 0])
-nutruth.anti_nu = Mom4Vec(file_data.neutrinos.mom[:, 1])
+# Fill in the neutrino 4-vectors
+nutruth.nu = Mom4Vec(file_data.nu.mom[:, 0])
+nutruth.anti_nu = Mom4Vec(file_data.nu.mom[:, 1])
 
 # Load the data from the model file
 with h5py.File(model_file, "r") as f:
-    nuflow.nu = Mom4Vec(f["neutrino"][:, 0])
-    nuflow.anti_nu = Mom4Vec(f["antineutrino"][:, 0])
+    nuflow.nu = Mom4Vec(f["neutrinos"][:num_events])
+    nuflow.anti_nu = Mom4Vec(f["antineutrino"][:num_events])
 
 # Combine the two neutrino types into a single list
 neutrino_list = [nuflow, nutruth]
@@ -56,7 +58,6 @@ plot_multi_hists(
     do_err=True,
     hist_kwargs=[n.hist_kwargs for n in neutrino_list],
     err_kwargs=[n.err_kwargs for n in neutrino_list],
-    scale=3,
 )
 plot_multi_hists(
     data_list=[n.anti_nu.mom for n in neutrino_list],
@@ -68,12 +69,11 @@ plot_multi_hists(
     do_err=True,
     hist_kwargs=[n.hist_kwargs for n in neutrino_list],
     err_kwargs=[n.err_kwargs for n in neutrino_list],
-    scale=3,
 )
 
 # Get the lepton associated with each neutrino
-lep_mask = file_data.leptons.oth[:, 0] == 1
-anti_lep_mask = file_data.leptons.oth[:, 0] == 0
+lep_mask = file_data.lep.oth[..., 0] == -1
+anti_lep_mask = file_data.lep.oth[..., 0] == 1
 
 # If both leptons are selected zero out the second
 lep_mask[lep_mask.sum(-1) == 2, 1] = False
@@ -84,8 +84,8 @@ has_lep = lep_mask.sum(-1) == 1
 has_anti_lep = anti_lep_mask.sum(-1) == 1
 
 # Pull out the lepton and anti-lepton
-lep = file_data.leptons.mom[has_lep][lep_mask[has_lep]]
-anti_lep = file_data.leptons.mom[has_anti_lep][anti_lep_mask[has_anti_lep]]
+lep = file_data.lep.mom[has_lep][lep_mask[has_lep]]
+anti_lep = file_data.lep.mom[has_anti_lep][anti_lep_mask[has_anti_lep]]
 
 # Convert to 4 vectors
 lep = Mom4Vec(lep)
@@ -106,7 +106,6 @@ plot_multi_hists(
     do_err=True,
     hist_kwargs=[n.hist_kwargs for n in neutrino_list],
     err_kwargs=[n.err_kwargs for n in neutrino_list],
-    scale=4,
 )
 plot_multi_hists(
     data_list=[n.W2.mass for n in neutrino_list],
@@ -117,5 +116,4 @@ plot_multi_hists(
     do_err=True,
     hist_kwargs=[n.hist_kwargs for n in neutrino_list],
     err_kwargs=[n.err_kwargs for n in neutrino_list],
-    scale=4,
 )
