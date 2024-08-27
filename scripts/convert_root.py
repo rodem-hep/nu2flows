@@ -150,10 +150,10 @@ def main():
             print(" -- getting the event info")
             evt_vars = [
                 "eventNumber",
-                "weight_pileup_NOSYS",
-                "weight_beamspot",
-                "weight_jvt_effSF_NOSYS",
                 "weight_mc_NOSYS",
+                "weight_beamspot",
+                "weight_pileup_NOSYS",
+                "weight_jvt_effSF_NOSYS",
                 "weight_btagSF_DL1dv01_Continuous_NOSYS",
                 "weight_leptonSF_tight_NOSYS",
             ]
