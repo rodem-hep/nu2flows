@@ -3,7 +3,6 @@ torch
 torchmetrics
 lightning
 wandb
-normflows
 onnx
 onnxruntime
 
