@@ -136,7 +136,7 @@ class NuFlows(LightningModule):
             outputs = outputs[..., dim:]
         return output_dict
 
-    @T.cuda.amp.custom_fwd(cast_inputs=T.float32)
+    @T.amp.custom_fwd(cast_inputs=T.float32, device_type="cuda")
     def _get_log_probs(
         self,
         targets: T.Tensor,
@@ -169,7 +169,7 @@ class NuFlows(LightningModule):
 
     @T.no_grad()
     def sample(self, inputs: dict) -> dict:
-        """Generate many points per sample."""
+        """Generate target variables points per sample."""
         # Get the context from the event feature extractor
         ctxt = self.get_context(inputs)
 

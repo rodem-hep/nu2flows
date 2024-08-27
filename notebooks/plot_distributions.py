@@ -50,7 +50,7 @@ for k, v in data.items():
     std = np.std(flat_v, axis=0)
     flat_v = (flat_v - mean) / std
 
-    flat_v = np.tanh(flat_v * 0.3)
+    flat_v = np.tanh(flat_v * 0.5)
 
     plot_multi_hists(
         data_list=flat_v,

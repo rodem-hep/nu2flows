@@ -32,7 +32,7 @@ flow_config:
   mlp_depth: 2
   mlp_act: SiLU
   tail_bound: 1.0
-  tanh_prescale: 0.3
+  tanh_prescale: 0.5
   dropout: 0
   num_bins: 10
   flow_type: coupling
