@@ -59,6 +59,9 @@ class NuFlows(LightningModule):
         self.valid_outs = []
         self.valid_targets = []
 
+        # Disable all masking, this is useful when running an ONNX export
+        self.disable_masking = False
+
         # Initialise the transformer vector encoder
         self.transformer = TransformerVectorEncoder(**transformer_config)
         dim = self.transformer.inpt_dim
@@ -98,11 +101,12 @@ class NuFlows(LightningModule):
             if inpt.ndim == 2:
                 inpt = inpt.unsqueeze(1)
 
-            if mask is None:
+            # Build the mask
+            if self.disable_masking:
+                mask = None
+            elif mask is None:
                 mask = T.ones(inpt.shape[:2], device=self.device, dtype=bool)
-
-            # Skip if the mask is all zeros
-            if mask.sum() == 0:
+            elif mask.sum() == 0:  # Dont process empty tensors
                 continue
 
             # Pass through the normalisation and embedding layers
@@ -115,7 +119,7 @@ class NuFlows(LightningModule):
 
         # Concatenate all the embeddings together
         embeddings = T.hstack(embeddings)
-        all_mask = T.hstack(all_mask)
+        all_mask = None if self.disable_masking else T.hstack(all_mask)
 
         # Pass the combined tensor through the transformer and return
         return self.transformer(embeddings, mask=all_mask)
@@ -186,8 +190,13 @@ class NuFlows(LightningModule):
         return out_dict
 
     def forward(self, *args) -> Any:
-        """Alias for sample required for ONNX export that assumes order."""
-        input_dict = dict(zip(self.input_dimensions.keys(), args, strict=True))
+        """Alias for self.sample required for ONNX export that assumes order."""
+        # Check if the inputs are batched which is required for masking/transformers
+        is_batched = args[0].ndim == 3
+        if not is_batched:
+            args = [a.unsqueeze(0) for a in args]
+
+        input_dict = dict(zip(self.input_dimensions.keys(), args, strict=False))
         sample_dict = self.sample(input_dict)
         return tuple(sample_dict.values())
 

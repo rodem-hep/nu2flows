@@ -4,7 +4,7 @@
 defaults:
   - _self_
   - trainer: default.yaml
-  - model: nuflow.yaml
+  - model: default.yaml
   - datamodule: default.yaml
   - loggers: default.yaml
   - hydra: default.yaml
@@ -28,4 +28,5 @@ compile: null # Can set to default for faster compiles
 # This is ideal for resuming a job, log to the same directory
 # Will also resume the loggers and set the ckpt_path to the latest
 full_resume: False
+new_seed: null # Sometimes its usefull to resume with a new seed
 ckpt_flag: last.ckpt # Name of the checkpoint file, can use wildcards

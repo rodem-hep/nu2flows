@@ -31,7 +31,11 @@ def main(cfg: DictConfig) -> None:
     if cfg.full_resume:
         log.info("Attempting to resume previous job")
         old_cfg = reload_original_config(ckpt_flag=cfg.ckpt_flag)
+        if cfg.new_seed is not None:
+            log.info("Resuming job with new seed")
+            old_cfg.seed = cfg.new_seed
         if old_cfg is not None:
+            log.info("Found previous config, loading it")
             cfg = old_cfg
     print_config(cfg)
 

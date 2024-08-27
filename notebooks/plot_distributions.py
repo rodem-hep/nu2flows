@@ -11,8 +11,8 @@ file_dir = "/srv/beegfs/scratch/groups/dpnc/atlas/ttbar_vflows/data/rel24_240209
 file_name = "merged.h5"
 file_path = file_dir + file_name
 
-n_events = None
-group_name = "odd"
+n_events = 100_000
+group_name = "even"
 
 data = {}
 with h5py.File(file_path, "r") as f:
@@ -24,15 +24,14 @@ with h5py.File(file_path, "r") as f:
 # Safety clips: make sure all kinematics are < 1 TeV
 # Kinematics are the first 3 columns of each array except met which is the first 2
 # Clip sumet to 5 TeV
-for k, v in data.items():
-    if k == "met":
-        data[k][..., :2] = np.clip(v[..., :2], -1e3, 1e3)
-        data[k][..., 2] = np.clip(v[..., 2], 0, 5e3)
-    else:
-        data[k][..., :3] = np.clip(v[..., :3], -1e3, 1e3)
+data["jet"][..., :3] = np.clip(data["jet"][..., :3], -1e3, 1e3)
+data["lep"][..., :3] = np.clip(data["lep"][..., :3], -1e3, 1e3)
+data["nu"][..., :3] = np.clip(data["nu"][..., :3], -1e3, 1e3)
+data["met"][..., :2] = np.clip(data["met"][..., :2], -1e3, 1e3)
+data["met"][..., 2] = np.clip(data["met"][..., 2], 0, 5e3)
 
 # Jets need to be padded so create a mask
-mask = data["jet"][..., 3] > 0.01
+mask = data["jet"][..., 3] > 0
 data["jet"] = data["jet"][mask]
 
 # Plot the distributions
@@ -45,12 +44,19 @@ for k, v in data.items():
     print(f" - min: {np.min(v, axis=tuple(range(v.ndim - 1)))}")
     print(f" - max: {np.max(v, axis=tuple(range(v.ndim - 1)))}")
 
+    # Normalise the data
     flat_v = v.reshape(v.shape[0], -1)
+    mean = np.mean(flat_v, axis=0)
+    std = np.std(flat_v, axis=0)
+    flat_v = (flat_v - mean) / std
+
+    flat_v = np.tanh(flat_v * 0.3)
+
     plot_multi_hists(
         data_list=flat_v,
         data_labels=k,
         col_labels=list(range(flat_v.shape[-1])),
-        path=f"plots/{k}_distributions2.png",
+        path=f"plots/{k}_distributions.png",
         bins=51,
-        logy=True,
+        # logy=True,
     )

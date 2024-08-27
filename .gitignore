@@ -8,6 +8,7 @@ nu2flows_models/
 plots/
 outputs/
 plots/
+onnx/
 .vscode/
 container/
 wandb/
@@ -24,6 +25,7 @@ user**/**
 *cache*
 
 # File types
+*.onnx
 launch.json
 .mypy*
 *workspace

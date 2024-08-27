@@ -3,14 +3,14 @@ _target_: src.datamodules.geant4.Geant4H5DataModule
 train_conf:
   file_name: merged.h5
   file_dir: ${paths.data_dir}
-  group_name: even
-  num_events: null
+  group_name: ${train_group}
+  num_events: 100_000
 
 test_conf:
   file_name: ${..train_conf.file_name}
   file_dir: ${..train_conf.file_dir}
-  group_name: odd
-  num_events: 1000_000
+  group_name: ${test_group}
+  num_events: 100_000
 
 loader_conf:
   pin_memory: True

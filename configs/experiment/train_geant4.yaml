@@ -4,6 +4,9 @@ defaults:
 
 trainer:
   precision: 16-mixed
+  max_epochs: 100
 
+train_group: even
+test_group: odd
 project_name: nu2flows_geant4
-network_name: trained_on_even_long
+network_name: final_long_${train_group}

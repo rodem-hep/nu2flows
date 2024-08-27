@@ -1,0 +1,55 @@
+_target_: src.models.nuflows.NuFlows
+
+gen_validation: 10
+
+embed_config:
+  hddn_dim: 256
+  num_blocks: 1
+  act_h: SiLU
+
+transformer_config:
+  inpt_dim: 128
+  outp_dim: 128
+  do_packed: True
+  encoder_config:
+    dim: 128
+    num_layers: 5
+    num_registers: 2
+    layer_config:
+      num_heads: 8
+      layerscale_init: 0.1
+  classattention_config:
+    dim: 128
+    num_layers: 2
+    do_final_norm: True
+    layer_config:
+      num_heads: 4
+      layerscale_init: null # Don't layerscale a cross attention block!
+
+flow_config:
+  num_stacks: 10
+  mlp_width: 256
+  mlp_depth: 2
+  mlp_act: SiLU
+  tail_bound: 1.0
+  tanh_prescale: 0.3
+  dropout: 0
+  num_bins: 10
+  flow_type: coupling
+  base_dist: uniform
+  do_lu: False
+  init_identity: True
+
+optimizer:
+  _target_: torch.optim.AdamW
+  _partial_: true
+  lr: 1.0e-4
+  # weight_decay: 1.0e-6
+
+scheduler:
+  _target_: mltools.mltools.lightning_utils.linear_warmup_cosine_decay
+  _partial_: true
+  total_steps: null # Replaced by trainer max_steps for a one cycle
+  warmup_steps: 10_000
+  init_factor: 1.0e-5
+  final_factor: 1.0e-5

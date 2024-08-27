@@ -12,7 +12,7 @@ packaging
 ninja
 flash-attn
 
-# Specific for the neutrinos
+# Specific for the neutrinos (git was updated more recently than pypi)
 git+https://github.com/VincentStimper/normalizing-flows.git
 
 # hydra

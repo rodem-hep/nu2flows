@@ -1,7 +1,7 @@
 _target_: lightning.Trainer
 
 min_epochs: 1
-max_epochs: 20
+max_epochs: 999999
 enable_progress_bar: True
 accelerator: auto
 devices: 1
