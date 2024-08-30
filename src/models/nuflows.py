@@ -72,11 +72,15 @@ class NuFlows(LightningModule):
             setattr(self, key + "_mlp", MLP(inpt_dim, outp_dim=dim, **embed_config))
 
         # Create the normalisation layer for the targets
-        target_dim = sum(target_dimensions.values())
-        self.target_norm = IterativeNormLayer(target_dim)
+        self.target_dim = sum(target_dimensions.values())
+        self.target_norm = IterativeNormLayer(self.target_dim)
 
         # Initialise the normalising flow
-        self.flow = rqs_flow(xz_dim=target_dim, ctxt_dim=self.transformer.outp_dim, **flow_config)
+        self.flow = rqs_flow(
+            xz_dim=self.target_dim,
+            ctxt_dim=self.transformer.outp_dim,
+            **flow_config,
+        )
 
     def get_context(self, inputs: dict) -> T.Tensor:
         """Pass the inputs through the transformer context extractor.
@@ -136,7 +140,7 @@ class NuFlows(LightningModule):
             outputs = outputs[..., dim:]
         return output_dict
 
-    @T.amp.custom_fwd(cast_inputs=T.float32, device_type="cuda")
+    @T.cuda.amp.custom_fwd(cast_inputs=T.float32)  # , device_type="cuda")
     def _get_log_probs(
         self,
         targets: T.Tensor,
@@ -196,9 +200,20 @@ class NuFlows(LightningModule):
         if not is_batched:
             args = [a.unsqueeze(0) for a in args]
 
-        input_dict = dict(zip(self.input_dimensions.keys(), args, strict=False))
-        sample_dict = self.sample(input_dict)
-        return tuple(sample_dict.values())
+        # Build the input dict
+        inputs = dict(zip(self.input_dimensions.keys(), args, strict=False))
+
+        # Pass through the flow but do not unpack into a dict!
+        ctxt = self.get_context(inputs)
+        sampled, log_probs = self.flow.sample(ctxt.shape[0], ctxt)
+        sampled = self.target_norm.reverse(sampled)
+
+        # Manual reshape helps ONNX understand the output otherwise it thinks the
+        # output shape is dynamic, this causes failures down the line
+        sampled = sampled.view(self.target_dim)
+        log_probs = log_probs.view(1)
+
+        return sampled, log_probs
 
     def training_step(self, batch: tuple, _batch_idx: int) -> T.Tensor:
         return self._shared_step(batch, "train")
@@ -246,6 +261,7 @@ class NuFlows(LightningModule):
                 ylabel=f"Target: {k}0",
                 path=f"plots/corr_{k}.png",
                 return_img=True,
+                do_pearson=True,
             )
             if wandb.run is not None:
                 wandb.log({f"valid/corr_{k}": [wandb.Image(img)]})
