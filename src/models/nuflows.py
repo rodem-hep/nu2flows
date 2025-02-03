@@ -200,12 +200,16 @@ class NuFlows(LightningModule):
         if not is_batched:
             args = [a.unsqueeze(0) for a in args]
 
+        # TODO Remove this! For now we assume that the first input is Z
+        z = args.pop(0)
+
         # Build the input dict
         inputs = dict(zip(self.input_dimensions.keys(), args, strict=False))
 
         # Pass through the flow but do not unpack into a dict!
         ctxt = self.get_context(inputs)
-        sampled, log_probs = self.flow.sample(ctxt.shape[0], ctxt)
+        # sampled, log_probs = self.flow.sample(ctxt.shape[0], ctxt)
+        sampled, log_probs = self.flow.forward_and_log_det(z, ctxt)
         sampled = self.target_norm.reverse(sampled)
 
         # Manual reshape helps ONNX understand the output otherwise it thinks the
