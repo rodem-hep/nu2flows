@@ -38,7 +38,7 @@ def parse_args():
         "--network_name",
         type=str,
         help="the name of the network to load",
-        default="final_even_long",
+        default="final_long_even",
     )
     args.add_argument(
         "--output_name",
